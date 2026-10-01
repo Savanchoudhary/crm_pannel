@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} Department — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accounts:department_list' %}" class="text-muted">Departments</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">{{ action }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">{{ action }} Department</h1>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-md-6">
+    <div class="crm-form-card">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Department Name <span class="text-danger">*</span></label>
+            {{ form.name }}
+            {% if form.name.errors %}<div class="text-danger fs-12 mt-1">{{ form.name.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Code <span class="text-danger">*</span></label>
+            {{ form.code }}
+            <div class="form-text">Short code like CALL, MKT, DEV</div>
+            {% if form.code.errors %}<div class="text-danger fs-12 mt-1">{{ form.code.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            {{ form.description }}
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              {{ form.is_active }}
+              <label class="form-check-label">Department is Active</label>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 d-flex gap-3">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle me-2"></i>{{ action }} Department
+          </button>
+          <a href="{% url 'accounts:department_list' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

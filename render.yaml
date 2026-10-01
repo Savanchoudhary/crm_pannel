@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: novem-crm
+    runtime: python
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --no-input
+    startCommand: python manage.py migrate && gunicorn config.wsgi:application
+    healthCheckPath: /accounts/login/
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: novem-crm.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://novem-crm.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: novem-crm-db
+          property: connectionString
+
+databases:
+  - name: novem-crm-db

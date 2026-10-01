@@ -1,0 +1,40 @@
+# Core Django
+Django==4.2.16
+gunicorn==23.0.0
+djangorestframework==3.15.2
+djangorestframework-simplejwt==5.3.1
+
+# Database
+psycopg2-binary==2.9.12
+
+# Environment
+python-decouple==3.8
+dj-database-url==2.2.0
+
+# Excel / Data
+pandas>=2.0           # Use --prefer-binary --only-binary=all for Python 3.14+
+openpyxl==3.1.5
+xlrd==2.0.1
+
+# Forms & UI helpers
+django-crispy-forms==2.3
+crispy-bootstrap5==2024.2
+Pillow>=10.0          # Use --prefer-binary for Python 3.14+
+
+# Filtering
+django-filter==24.3
+
+# CORS
+django-cors-headers==4.4.0
+
+# Security & utilities
+django-extensions==3.2.3
+whitenoise==6.7.0
+
+# Date/time utilities
+python-dateutil==2.9.0.post0
+
+# Testing
+pytest>=8.0
+pytest-django>=4.0
+factory-boy>=3.0

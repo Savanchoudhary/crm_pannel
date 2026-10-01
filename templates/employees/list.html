@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Employees — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Employees</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Employees</h1>
+    <p class="page-subtitle">Manage your team across all departments.</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'accounts:employee_create' %}" class="btn btn-primary">
+      <i class="bi bi-person-plus-fill"></i> Add Employee
+    </a>
+    <a href="{% url 'accounts:department_list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-building"></i> Departments
+    </a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon primary"><i class="bi bi-people-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon success"><i class="bi bi-person-check-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.active }}</div>
+      <div class="stat-label">Active</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon info"><i class="bi bi-telephone-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.calling }}</div>
+      <div class="stat-label">HR Department</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon success"><i class="bi bi-megaphone-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.marketing }}</div>
+      <div class="stat-label">Marketing</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warning"><i class="bi bi-code-slash"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.developers }}</div>
+      <div class="stat-label">Developers</div>
+    </div>
+  </div>
+</div>
+
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <form method="get" class="d-flex gap-2 align-items-center flex-wrap w-100">
+      <div class="search-bar" style="width:260px;">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" name="search" class="form-control" placeholder="Search employees..." value="{{ search }}" />
+      </div>
+      <select name="role" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Roles</option>
+        {% for val, label, is_selected in role_choices %}
+        <option value="{{ val }}" {% if is_selected %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="department" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Departments</option>
+        {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if dept.is_selected %}selected{% endif %}>{{
+          dept.name }}
+        </option>
+        {% endfor %}
+      </select>
+      <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Status</option>
+        <option value="active" {% if status_active %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if status_inactive %}selected{% endif %}>Inactive</option>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+      {% if search or role_filter or dept_filter or status_filter %}
+      <a href="{% url 'accounts:employee_list' %}" class="btn btn-sm btn-outline-secondary"><i
+          class="bi bi-x-circle"></i> Clear</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Employee ID</th>
+          <th>Role</th>
+          <th>Department</th>
+          <th>Phone</th>
+          <th>Status</th>
+          <th>Last Seen</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp in employees %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar avatar-md">
+                {% if emp.avatar %}<img src="{{ emp.avatar.url }}" alt="{{ emp.full_name }}" />
+                {% else %}{{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}{% endif %}
+              </div>
+              <div>
+                <div class="fw-600 fs-13">{{ emp.get_full_name }}</div>
+                <div class="text-muted fs-12">{{ emp.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="text-muted fs-12">{{ emp.profile.employee_id|default:"—" }}</td>
+          <td>{{ emp.role|role_badge }}</td>
+          <td class="fs-13">{{ emp.profile.department.name|default:"—" }}</td>
+          <td class="fs-13">{{ emp.phone|default:"—" }}</td>
+          <td>
+            {% if emp.is_active %}
+            <span class="status-badge interested">Active</span>
+            {% else %}
+            <span class="status-badge not_interested">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="text-muted fs-12">
+            {% if emp.last_seen %}{{ emp.last_seen|timesince }} ago{% else %}Never{% endif %}
+          </td>
+          <td class="actions">
+            <a href="{% url 'accounts:employee_detail' emp.pk %}" class="btn btn-xs btn-outline-primary"
+              data-bs-toggle="tooltip" title="View">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a href="{% url 'accounts:employee_edit' emp.pk %}" class="btn btn-xs btn-outline-secondary"
+              data-bs-toggle="tooltip" title="Edit">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <button class="btn btn-xs {% if emp.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+              data-bs-toggle="tooltip" title="{% if emp.is_active %}Deactivate{% else %}Activate{% endif %}"
+              onclick="toggleEmployee({{ emp.pk }}, this)">
+              <i class="bi {% if emp.is_active %}bi-person-x{% else %}bi-person-check{% endif %}"></i>
+            </button>
+            {% if not emp.is_superuser and emp != request.user %}
+            <form method="post" action="{% url 'accounts:employee_delete' emp.pk %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-xs btn-outline-danger" data-bs-toggle="tooltip" title="Delete"
+                data-confirm="Delete {{ emp.full_name }} permanently?">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="table-empty"><i class="bi bi-people"></i>
+              <p>No employees found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if employees.paginator.num_pages > 1 %}
+  <div class="crm-pagination">
+    <span class="pagination-info">{{ employees.start_index }}–{{ employees.end_index }} of {{ employees.paginator.count
+      }}</span>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if employees.has_previous %}<li class="page-item"><a class="page-link"
+            href="?page={{ employees.previous_page_number }}&{{ request.GET.urlencode }}">‹</a></li>{% endif %}
+        {% if employees.has_next %}<li class="page-item"><a class="page-link"
+            href="?page={{ employees.next_page_number }}&{{ request.GET.urlencode }}">›</a></li>{% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function toggleEmployee(pk, btn) {
+    csrfPost(`/accounts/employees/${pk}/toggle/`, {}, data => {
+      const isActive = data.status === 'active';
+      const row = btn.closest('tr');
+      const badge = row.querySelector('.status-badge');
+      if (badge) { badge.textContent = isActive ? 'Active' : 'Inactive'; badge.className = `status-badge ${isActive ? 'interested' : 'not_interested'}`; }
+      btn.className = `btn btn-xs ${isActive ? 'btn-outline-warning' : 'btn-outline-success'}`;
+      btn.querySelector('i').className = `bi ${isActive ? 'bi-person-x' : 'bi-person-check'}`;
+      showToast(`Employee ${data.status}.`, isActive ? 'success' : 'warning');
+    });
+  }
+</script>
+{% endblock %}

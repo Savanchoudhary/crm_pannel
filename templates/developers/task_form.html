@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ action|default:"Create" }} Task — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'developers:tasks' %}" class="text-muted">Tasks</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">{{ action|default:"Create" }} Task</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">{{ action|default:"Create" }} Task</h1>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-8">
+    <div class="crm-form-card">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Task Title <span class="text-danger">*</span></label>
+            <input type="text" name="title" class="form-control" placeholder="e.g. Implement login page" required
+                   value="{{ task.title|default:'' }}" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="4"
+                      placeholder="Detailed description of the task...">{{ task.description|default:'' }}</textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Assign To Developer</label>
+            <select name="developer" class="form-select">
+              <option value="">Unassigned</option>
+              {% for dev in developers %}
+              <option value="{{ dev.id }}" {% if task.developer_id == dev.id %}selected{% endif %}>{{ dev.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Project</label>
+            <select name="project" class="form-select">
+              <option value="">No Project</option>
+              {% for proj in projects %}
+              <option value="{{ proj.id }}" {% if task.project_id == proj.id %}selected{% endif %}>{{ proj.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Priority</label>
+            <select name="priority" class="form-select">
+              {% for val, label in priority_choices %}
+              <option value="{{ val }}" {% if task.priority == val %}selected{% elif not task and val == 'MEDIUM' %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Estimated Hours</label>
+            <input type="number" name="estimated_hours" class="form-control" min="0" step="0.5"
+                   value="{{ task.estimated_hours|default:'0' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Start Date</label>
+            <input type="date" name="start_date" class="form-control"
+                   value="{{ task.start_date|default:'' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Due Date</label>
+            <input type="date" name="due_date" class="form-control"
+                   value="{{ task.due_date|default:'' }}" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2"
+                      placeholder="Any additional notes or instructions...">{{ task.notes|default:'' }}</textarea>
+          </div>
+        </div>
+        <div class="mt-4 d-flex gap-3">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-circle me-2"></i>{{ action|default:"Create" }} Task
+          </button>
+          <a href="{% url 'developers:tasks' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

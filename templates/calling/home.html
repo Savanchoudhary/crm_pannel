@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Calling — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Calling</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Calling</h1>
+    <p class="page-subtitle">{{ today|date:"l, F j, Y" }}</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'leads:list' %}" class="btn btn-primary">
+      <i class="bi bi-list-ul"></i> My Leads
+    </a>
+    <a href="{% url 'calling:followups' %}" class="btn btn-outline-warning">
+      <i class="bi bi-calendar-check"></i> Follow-ups
+      {% if overdue_followups %}<span class="badge bg-danger ms-1">{{ overdue_followups }}</span>{% endif %}
+    </a>
+  </div>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon primary"><i class="bi bi-people-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ total_leads }}</div><div class="stat-label">My Leads</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warning"><i class="bi bi-hourglass-split"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ pending }}</div><div class="stat-label">Pending</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon success"><i class="bi bi-hand-thumbs-up-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ interested }}</div><div class="stat-label">Interested</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ overdue }}</div><div class="stat-label">Overdue Follow-ups</div></div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-4">
+    <div class="crm-card">
+      <div class="crm-card-header"><h5 class="crm-card-title"><i class="bi bi-calendar-event-fill"></i> Today's Follow-ups</h5></div>
+      <div class="crm-card-body p-0">
+        {% for fu in todays_followups %}
+        <div class="px-3 py-2 border-bottom">
+          <div class="fw-600 fs-13">{{ fu.lead.name }}</div>
+          <div class="text-muted fs-12">{{ fu.lead.phone }}</div>
+          {% if fu.notes %}<div class="fs-12">{{ fu.notes|truncatechars:50 }}</div>{% endif %}
+        </div>
+        {% empty %}
+        <div class="text-center py-4 text-muted fs-13">No follow-ups today 🎉</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-8">
+    <div class="crm-table-wrapper">
+      <div class="crm-table-header">
+        <span class="crm-table-title"><i class="bi bi-people text-primary"></i> Recent Leads</span>
+        <a href="{% url 'leads:list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="crm-table">
+          <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            {% for lead in recent_leads %}
+            <tr>
+              <td>
+                <div class="fw-600 fs-13">{{ lead.name }}</div>
+                {% if lead.company %}<div class="text-muted fs-12">{{ lead.company }}</div>{% endif %}
+              </td>
+              <td><a href="tel:{{ lead.phone }}" class="fw-500">{{ lead.phone }}</a></td>
+              <td><span class="status-badge {{ lead.status|lower }}">{{ lead.get_status_display }}</span></td>
+              <td>
+                <a href="{% url 'leads:detail' lead.pk %}" class="btn btn-xs btn-outline-primary"><i class="bi bi-eye"></i></a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center py-4 text-muted">No leads assigned</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

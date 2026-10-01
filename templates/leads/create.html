@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Add Lead — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'leads:list' %}" class="text-muted">Leads</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">Add Lead</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Add New Lead</h1>
+    <p class="page-subtitle">Enter the lead's contact details manually.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-8">
+    <div class="crm-form-card">
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if errors %}
+        <div class="alert alert-danger mb-4">
+          <strong>Please fix the errors below:</strong>
+          <ul class="mb-0 mt-1">
+            {% for field, error in errors.items %}
+            <li>{{ field|title }}: {{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <h6 class="fw-700 mb-3 text-muted text-uppercase" style="font-size:11px;letter-spacing:.06em;">Contact Information</h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">Full Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control {% if errors.name %}is-invalid{% endif %}"
+                   value="{{ data.name|default:'' }}" placeholder="e.g. Rajesh Kumar" required />
+            {% if errors.name %}<div class="invalid-feedback">{{ errors.name }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Company</label>
+            <input type="text" name="company" class="form-control"
+                   value="{{ data.company|default:'' }}" placeholder="e.g. ABC Industries" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone <span class="text-danger">*</span></label>
+            <input type="tel" name="phone" class="form-control {% if errors.phone %}is-invalid{% endif %}"
+                   value="{{ data.phone|default:'' }}" placeholder="e.g. +91 9876543210" required />
+            {% if errors.phone %}<div class="invalid-feedback">{{ errors.phone }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Alternate Phone</label>
+            <input type="tel" name="alternate_phone" class="form-control"
+                   value="{{ data.alternate_phone|default:'' }}" placeholder="Optional" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control"
+                   value="{{ data.email|default:'' }}" placeholder="e.g. rajesh@example.com" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Website</label>
+            <input type="url" name="website" class="form-control"
+                   value="{{ data.website|default:'' }}" placeholder="https://..." />
+          </div>
+        </div>
+
+        <h6 class="fw-700 mb-3 text-muted text-uppercase" style="font-size:11px;letter-spacing:.06em;">Location</h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">City</label>
+            <input type="text" name="city" class="form-control" value="{{ data.city|default:'' }}" placeholder="City" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">State</label>
+            <input type="text" name="state" class="form-control" value="{{ data.state|default:'' }}" placeholder="State" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Full Address / Area</label>
+            <input type="text" name="location" class="form-control" value="{{ data.location|default:'' }}" placeholder="e.g. Baner, Pune" />
+          </div>
+        </div>
+
+        <h6 class="fw-700 mb-3 text-muted text-uppercase" style="font-size:11px;letter-spacing:.06em;">Lead Details</h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">Source</label>
+            <select name="source" class="form-select">
+              {% for val, label in source_choices %}
+              <option value="{{ val }}" {% if data.source == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Product Interest</label>
+            <input type="text" name="product_interest" class="form-control"
+                   value="{{ data.product_interest|default:'' }}" placeholder="e.g. HVAC Controls" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Budget</label>
+            <input type="text" name="budget" class="form-control"
+                   value="{{ data.budget|default:'' }}" placeholder="e.g. ₹50,000 – ₹1,00,000" />
+          </div>
+          {% if user.is_admin %}
+          <div class="col-md-6">
+            <label class="form-label">Assign To</label>
+            <select name="assigned_to" class="form-select">
+              <option value="">Unassigned</option>
+              {% for emp in calling_employees %}
+              <option value="{{ emp.id }}">{{ emp.get_full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div class="col-12">
+            <label class="form-label">Remarks</label>
+            <textarea name="remarks" class="form-control" rows="3"
+                      placeholder="Any additional notes about this lead...">{{ data.remarks|default:'' }}</textarea>
+          </div>
+        </div>
+
+        <div class="d-flex gap-3">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-person-plus-fill me-2"></i>Create Lead
+          </button>
+          <a href="{% url 'leads:list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-4 mt-4 mt-lg-0">
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-lightbulb-fill text-warning"></i> Tips</h5>
+      </div>
+      <div class="crm-card-body fs-13 text-muted">
+        <ul class="list-unstyled mb-0" style="line-height:2;">
+          <li><i class="bi bi-check-circle-fill text-success me-2"></i>Name and Phone are required.</li>
+          <li><i class="bi bi-check-circle-fill text-success me-2"></i>Duplicate phone numbers will be rejected.</li>
+          <li><i class="bi bi-check-circle-fill text-success me-2"></i>You can import bulk leads via Excel.</li>
+          <li><i class="bi bi-check-circle-fill text-success me-2"></i>Leads can be reassigned later.</li>
+        </ul>
+        <div class="mt-3 pt-3 border-top">
+          <a href="{% url 'leads:excel_upload' %}" class="btn btn-outline-success w-100">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Import from Excel instead
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

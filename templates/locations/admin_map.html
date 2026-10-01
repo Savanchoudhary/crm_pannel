@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Location Map — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Location Map</span>{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>#adminMap { height: 520px; border-radius: var(--radius-lg); border:1px solid var(--border); }</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">HR & Marketing Location Map</h1>
+    <p class="page-subtitle">Live and last-known locations of HR and Marketing employees.</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'locations:admin_history' %}" class="btn btn-outline-primary">
+      <i class="bi bi-clock-history"></i> Location History
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Map -->
+  <div class="col-12 col-lg-8">
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-map-fill"></i> Employee Locations</h5>
+        <span class="badge bg-primary">{{ employee_locations|length }} tracked</span>
+      </div>
+      <div class="crm-card-body p-0">
+        <div id="adminMap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Employee List -->
+  <div class="col-12 col-lg-4">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-people-fill"></i> Employees</h5>
+      </div>
+      <div class="crm-card-body p-0" style="max-height:560px;overflow-y:auto;">
+        {% for emp in employee_locations %}
+        <div class="d-flex align-items-start gap-3 px-3 py-3 border-bottom emp-loc-item"
+             data-lat="{{ emp.lat }}" data-lng="{{ emp.lng }}" style="cursor:pointer;"
+             onmouseover="this.style.background='var(--body-bg)'" onmouseout="this.style.background=''">
+          <div class="avatar avatar-md flex-shrink-0">
+            {{ emp.name|slice:":1"|upper }}
+          </div>
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-600 fs-13">{{ emp.name }}</div>
+            <div class="text-muted fs-12">{{ emp.role }}</div>
+            <div class="text-muted fs-12 mt-1">
+              <i class="bi bi-clock me-1"></i>{{ emp.timestamp }}
+            </div>
+          </div>
+          <div class="flex-shrink-0">
+            {% if emp.is_tracking %}
+            <span class="tracking-indicator active" style="padding:2px 8px;font-size:11px;">
+              <span class="dot"></span> Live
+            </span>
+            {% else %}
+            <span class="badge bg-secondary" style="font-size:10px;">Offline</span>
+            {% endif %}
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-geo-alt-fill" style="font-size:40px;opacity:.3;display:block;margin-bottom:12px;"></i>
+          <p class="fs-13">No employee locations available.</p>
+          <p class="fs-12">Locations appear here when employees start tracking.</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{{ employee_locations|json_script:"employee-locations-data" }}
+<script>
+const map = L.map('adminMap', { zoomControl: true });
+L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Tiles <a href="https://www.openstreetmap.de/">openstreetmap.de</a>',
+  maxZoom: 20
+}).addTo(map);
+
+const locations = JSON.parse(document.getElementById('employee-locations-data').textContent);
+const markers = [];
+const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[char]));
+
+if (locations.length) {
+  locations.forEach(emp => {
+    const color = emp.is_tracking ? '#10b981' : '#94a3b8';
+    const safeName = escapeHtml(emp.name);
+    const safeRole = escapeHtml(emp.role);
+    const safeTimestamp = escapeHtml(emp.timestamp);
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#4f46e5,#6366f1);
+                         display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;
+                         font-size:13px;border:3px solid ${color};box-shadow:0 2px 8px rgba(0,0,0,.2);">
+               ${safeName.charAt(0).toUpperCase()}
+             </div>`,
+      iconSize: [36,36],
+      iconAnchor: [18,18],
+    });
+    const marker = L.marker([emp.lat, emp.lng], { icon })
+      .addTo(map)
+      .bindPopup(`<div style="font-family:Inter,sans-serif;min-width:160px;">
+        <div style="font-weight:700;margin-bottom:4px;">${safeName}</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:4px;">${safeRole}</div>
+        <div style="font-size:11px;color:#94a3b8;">Updated: ${safeTimestamp}</div>
+        ${emp.is_tracking ? '<div style="color:#10b981;font-size:11px;font-weight:600;margin-top:4px;">● Live Tracking</div>' : ''}
+      </div>`);
+    markers.push(marker);
+  });
+
+  // Fit all markers
+  const group = L.featureGroup(markers);
+  map.fitBounds(group.getBounds().pad(0.15));
+} else {
+  map.setView([20.5937, 78.9629], 5); // Default: India
+}
+
+// Click on employee list item → pan to marker
+document.querySelectorAll('.emp-loc-item').forEach((el, i) => {
+  el.addEventListener('click', () => {
+    const lat = parseFloat(el.dataset.lat);
+    const lng = parseFloat(el.dataset.lng);
+    map.setView([lat, lng], 16, { animate: true });
+    if (markers[i]) markers[i].openPopup();
+  });
+});
+</script>
+{% endblock %}

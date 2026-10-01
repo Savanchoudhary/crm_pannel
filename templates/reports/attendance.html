@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Attendance Report — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'reports:home' %}" class="text-muted">Reports</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">Attendance Report</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Attendance Report</h1>
+  </div>
+  <div class="page-actions">
+    <form method="get" class="d-flex gap-2 align-items-center">
+      <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}" />
+      <span class="text-muted fs-12">to</span>
+      <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}" />
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Apply</button>
+    </form>
+  </div>
+</div>
+
+<div class="stat-card mb-4" style="max-width:200px;">
+  <div class="stat-icon primary"><i class="bi bi-calendar-check-fill"></i></div>
+  <div class="stat-body">
+    <div class="stat-value">{{ total_records }}</div>
+    <div class="stat-label">Total Records</div>
+  </div>
+</div>
+
+<div class="crm-table-wrapper">
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Days Present</th>
+          <th>Check-ins</th>
+          <th>Total Hours</th>
+          <th>Avg Hours/Day</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp_name, data in per_employee %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar avatar-sm">{{ emp_name|slice:":1"|upper }}{{ emp_name|slice:"1:2"|upper }}</div>
+              <span class="fw-600 fs-13">{{ emp_name }}</span>
+            </div>
+          </td>
+          <td class="fw-700">{{ data.days }}</td>
+          <td class="text-success fw-600">{{ data.check_ins }}</td>
+          <td class="fw-600">{{ data.total_hours|floatformat:1 }}h</td>
+          <td class="text-muted fs-13">
+            {% if data.days > 0 %}
+              {{ data.total_hours|floatformat:1|divisibleby:data.days }}h
+              {% comment %}Simple avg display{% endcomment %}
+              —
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5">
+            <div class="table-empty"><i class="bi bi-calendar-x"></i><p>No attendance records for this period.</p></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

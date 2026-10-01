@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Notifications</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Notifications</h1>
+  </div>
+  <div class="page-actions">
+    <button class="btn btn-outline-secondary" id="markAllRead">
+      <i class="bi bi-check-all"></i> Mark All Read
+    </button>
+  </div>
+</div>
+
+<div class="crm-card">
+  <div class="crm-card-body p-0">
+    {% for notif in notifications %}
+    <div class="d-flex gap-3 p-3 border-bottom {% if not notif.is_read %}bg-light{% endif %}">
+      <div class="notif-icon flex-shrink-0">
+        <i class="bi {{ notif.icon }}"></i>
+      </div>
+      <div class="flex-grow-1">
+        <div class="fw-600 fs-14">{{ notif.title }}</div>
+        <div class="text-secondary fs-13 mt-1">{{ notif.message }}</div>
+        <div class="text-muted fs-12 mt-1">{{ notif.created_at|timesince }} ago</div>
+      </div>
+      {% if not notif.is_read %}
+      <div class="flex-shrink-0">
+        <span class="badge bg-primary">New</span>
+      </div>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="table-empty py-5">
+      <i class="bi bi-bell-slash" style="font-size:48px; opacity:.3; display:block; margin-bottom:12px;"></i>
+      <p>No notifications</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% if notifications.paginator.num_pages > 1 %}
+  <div class="crm-pagination">
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if notifications.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ notifications.previous_page_number }}">‹</a></li>{% endif %}
+      {% if notifications.has_next %}<li class="page-item"><a class="page-link" href="?page={{ notifications.next_page_number }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

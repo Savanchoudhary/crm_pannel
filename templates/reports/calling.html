@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% load crm_tags humanize %}
+{% block title %}Calling Report — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'reports:home' %}" class="text-muted">Reports</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">Calling Report</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Calling Report</h1>
+  </div>
+  <div class="page-actions">
+    <!-- Date range filter -->
+    <form method="get" class="d-flex gap-2 align-items-center">
+      <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}" />
+      <span class="text-muted fs-12">to</span>
+      <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}" />
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Apply</button>
+    </form>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="dashboard-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-icon primary"><i class="bi bi-telephone-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ total_calls|intcomma }}</div><div class="stat-label">Total Calls</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon success"><i class="bi bi-hand-thumbs-up-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ total_interested }}</div><div class="stat-label">Interested</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon info"><i class="bi bi-graph-up-arrow"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ conversion_rate }}%</div><div class="stat-label">Conversion Rate</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warning"><i class="bi bi-stopwatch-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ total_duration|duration_display }}</div><div class="stat-label">Total Duration</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon secondary"><i class="bi bi-clock-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ avg_duration|duration_display }}</div><div class="stat-label">Avg Duration</div></div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Chart -->
+  <div class="col-12 col-lg-8">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-bar-chart-fill"></i> Calls Per Day</h5>
+      </div>
+      <div class="crm-card-body">
+        <div class="chart-container" style="height:260px;">
+          <canvas id="callsChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Conversion donut -->
+  <div class="col-12 col-lg-4">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-pie-chart-fill"></i> Outcome Split</h5>
+      </div>
+      <div class="crm-card-body d-flex align-items-center justify-content-center">
+        <div class="chart-container" style="height:220px;width:220px;">
+          <canvas id="outcomeChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Per-Employee Table -->
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <span class="crm-table-title"><i class="bi bi-people-fill text-primary"></i> Performance by Employee</span>
+  </div>
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Total Calls</th>
+          <th>Interested</th>
+          <th>Not Interested</th>
+          <th>No Answer</th>
+          <th>Follow-ups</th>
+          <th>Total Duration</th>
+          <th>Conv. Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp in per_employee %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar avatar-sm">{{ emp.employee__first_name|first|upper }}{{ emp.employee__last_name|first|upper }}</div>
+              <span class="fw-600 fs-13">{{ emp.employee__first_name }} {{ emp.employee__last_name }}</span>
+            </div>
+          </td>
+          <td class="fw-700">{{ emp.total }}</td>
+          <td><span class="text-success fw-600">{{ emp.interested }}</span></td>
+          <td><span class="text-danger fw-600">{{ emp.not_interested }}</span></td>
+          <td><span class="text-warning fw-600">{{ emp.no_answer }}</span></td>
+          <td><span class="text-info fw-600">{{ emp.follow_up }}</span></td>
+          <td class="fs-13">{{ emp.total_duration|default:0|duration_display }}</td>
+          <td>
+            {% if emp.total %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height:6px;min-width:60px;">
+                <div class="progress-bar bg-success" style="width:{% widthratio emp.interested emp.total 100 %}%"></div>
+              </div>
+              <span class="fs-12 fw-600">{% widthratio emp.interested emp.total 100 %}%</span>
+            </div>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="table-empty"><i class="bi bi-telephone-x"></i><p>No call data for this period.</p></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+// Daily calls bar chart
+(function() {
+  const ctx = document.getElementById('callsChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ chart_labels|safe }},
+      datasets: [{
+        label: 'Calls',
+        data:   {{ chart_data|safe }},
+        backgroundColor: 'rgba(79,70,229,0.15)',
+        borderColor: '#4f46e5',
+        borderWidth: 2,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 15 } },
+        y: { grid: { color: '#f1f5f9' }, beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+})();
+
+// Outcome donut
+(function() {
+  const ctx = document.getElementById('outcomeChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Interested', 'Not Interested', 'Other'],
+      datasets: [{
+        data: [{{ total_interested }}, {{ per_employee|length|default:0 }}, 0],
+        backgroundColor: ['#10b981','#ef4444','#94a3b8'],
+        borderWidth: 2,
+        borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 12 } }
+      },
+      cutout: '65%',
+    }
+  });
+})();
+</script>
+{% endblock %}

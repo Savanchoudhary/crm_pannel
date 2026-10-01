@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Projects — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Projects</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Projects</h1>
+  </div>
+  <div class="page-actions">
+    {% if user.is_admin %}
+    <a href="{% url 'developers:project_create' %}" class="btn btn-primary">
+      <i class="bi bi-folder-plus"></i> New Project
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  {% for project in projects %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <div>
+          <h5 class="fw-700 mb-1 fs-14">{{ project.name }}</h5>
+          <span class="status-badge {{ project.status|lower }} fs-11">{{ project.get_status_display }}</span>
+        </div>
+        <span class="badge bg-light text-dark">{{ project.task_count }} tasks</span>
+      </div>
+      <div class="crm-card-body">
+        {% if project.description %}
+        <p class="text-muted fs-13 mb-3">{{ project.description|truncatechars:80 }}</p>
+        {% endif %}
+
+        <!-- Progress -->
+        <div class="mb-3">
+          <div class="d-flex justify-content-between fs-12 mb-1">
+            <span class="text-muted">Progress</span>
+            <span class="fw-700 text-primary">{{ project.completion_percentage }}%</span>
+          </div>
+          <div class="progress" style="height:8px;">
+            <div class="progress-bar bg-primary" style="width:{{ project.completion_percentage }}%;"></div>
+          </div>
+        </div>
+
+        <div class="row g-2 fs-12 text-muted">
+          {% if project.start_date %}
+          <div class="col-6 d-flex align-items-center gap-1">
+            <i class="bi bi-calendar3"></i>
+            <span>{{ project.start_date|date:"M j, Y" }}</span>
+          </div>
+          {% endif %}
+          {% if project.end_date %}
+          <div class="col-6 d-flex align-items-center gap-1">
+            <i class="bi bi-calendar-x"></i>
+            <span>{{ project.end_date|date:"M j, Y" }}</span>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if project.team_members.exists %}
+        <div class="mt-3 pt-2 border-top">
+          <div class="text-muted fs-12 mb-1">Team</div>
+          <div class="d-flex gap-1 flex-wrap">
+            {% for member in project.team_members.all|slice:":5" %}
+            <div class="avatar avatar-sm" title="{{ member.full_name }}"
+                 data-bs-toggle="tooltip">
+              {{ member.first_name|first|upper }}{{ member.last_name|first|upper }}
+            </div>
+            {% endfor %}
+            {% if project.team_members.count > 5 %}
+            <div class="avatar avatar-sm bg-secondary">+{{ project.team_members.count|add:"-5" }}</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="crm-card">
+      <div class="crm-card-body">
+        <div class="table-empty">
+          <i class="bi bi-folder2-open"></i>
+          <p>No projects yet.
+            {% if user.is_admin %}<a href="{% url 'developers:project_create' %}">Create the first one</a>.{% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

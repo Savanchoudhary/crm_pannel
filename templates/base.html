@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Novem Controls CRM{% endblock %}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/crm.css" />
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="crm-body">
+
+<!-- ══════════════════════════════════════════════════ SIDEBAR ══ -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <img class="brand-wordmark" src="/static/img/novem-controls-logo.jpg.jpeg" alt="Novem Controls" />
+    <button class="sidebar-toggle-btn d-lg-none" id="sidebarClose">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <div class="sidebar-user">
+    <div class="user-avatar-sm">
+      {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="{{ user.full_name }}" />
+      {% else %}<span>{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>{% endif %}
+    </div>
+    <div class="user-info">
+      <div class="user-name">{{ user.get_full_name }}</div>
+      <div class="user-role">
+        {% if user.is_admin %}<span class="role-badge admin">Admin</span>
+        {% elif user.is_calling %}<span class="role-badge calling">HR Department</span>
+        {% elif user.is_marketing %}<span class="role-badge marketing">Marketing</span>
+        {% elif user.is_developer %}<span class="role-badge developer">Developer</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <a href="{% url 'dashboard:index' %}" class="nav-item {% if request.path == '/dashboard/' %}active{% endif %}">
+      <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+    </a>
+
+    {% if user.is_admin or user.is_calling %}
+    <div class="nav-section-label">Sales</div>
+    <a href="{% url 'leads:list' %}" class="nav-item {% if '/leads/' in request.path %}active{% endif %}">
+      <i class="bi bi-people-fill"></i><span>Leads</span>
+    </a>
+    <a href="{% url 'calling:home' %}" class="nav-item {% if '/calling/' in request.path and 'monitor' not in request.path %}active{% endif %}">
+      <i class="bi bi-telephone-fill"></i><span>HR Department</span>
+    </a>
+    <a href="{% url 'calling:followups' %}" class="nav-item {% if 'followups' in request.path %}active{% endif %}">
+      <i class="bi bi-calendar-check-fill"></i><span>Follow-ups</span>
+      {% if overdue_count %}<span class="nav-badge">{{ overdue_count }}</span>{% endif %}
+    </a>
+    {% endif %}
+
+    {% if user.is_admin %}
+    <a href="{% url 'leads:excel_upload' %}" class="nav-item {% if 'excel' in request.path %}active{% endif %}">
+      <i class="bi bi-file-earmark-spreadsheet-fill"></i><span>Excel Import</span>
+    </a>
+    <a href="{% url 'calling:monitor' %}" class="nav-item {% if 'monitor' in request.path %}active{% endif %}">
+      <i class="bi bi-eye-fill"></i><span>Call Monitor</span>
+    </a>
+    {% endif %}
+
+    {% if user.is_admin or user.is_marketing %}
+    <div class="nav-section-label">Marketing</div>
+    <a href="{% url 'marketing:home' %}" class="nav-item {% if '/marketing/' in request.path %}active{% endif %}">
+      <i class="bi bi-megaphone-fill"></i><span>Marketing</span>
+    </a>
+    {% endif %}
+
+    {% if user.is_admin or user.is_developer %}
+    <div class="nav-section-label">Development</div>
+    <a href="{% url 'developers:home' %}" class="nav-item {% if '/developers/' in request.path and 'task' not in request.path and 'project' not in request.path %}active{% endif %}">
+      <i class="bi bi-code-slash"></i><span>Developer Hub</span>
+    </a>
+    <a href="{% url 'developers:tasks' %}" class="nav-item {% if 'tasks' in request.path %}active{% endif %}">
+      <i class="bi bi-kanban-fill"></i><span>Tasks</span>
+    </a>
+    <a href="{% url 'developers:projects' %}" class="nav-item {% if 'projects' in request.path %}active{% endif %}">
+      <i class="bi bi-folder2-open"></i><span>Projects</span>
+    </a>
+    {% if user.is_developer %}
+    <a href="{% url 'attendance:student_attendance' %}" class="nav-item {% if '/attendance/students/' in request.path %}active{% endif %}">
+      <i class="bi bi-person-check-fill"></i><span>Student Attendance</span>
+    </a>
+    {% endif %}
+    {% endif %}
+
+    <div class="nav-section-label">Tools</div>
+    <a href="{% url 'attendance:my_attendance' %}" class="nav-item {% if '/attendance/' in request.path %}active{% endif %}">
+      <i class="bi bi-clock-history"></i><span>Attendance</span>
+    </a>
+    <a href="{% url 'locations:my_history' %}" class="nav-item {% if '/locations/' in request.path and 'map' not in request.path and 'admin' not in request.path %}active{% endif %}">
+      <i class="bi bi-geo-alt-fill"></i><span>My Location</span>
+    </a>
+    <a href="{% url 'notifications:list' %}" class="nav-item {% if '/notifications/' in request.path %}active{% endif %}">
+      <i class="bi bi-bell-fill"></i><span>Notifications</span>
+      {% if unread_notification_count > 0 %}<span class="nav-badge">{{ unread_notification_count }}</span>{% endif %}
+    </a>
+
+    {% if user.is_admin %}
+    <div class="nav-section-label">Admin</div>
+    <a href="{% url 'accounts:employee_list' %}" class="nav-item {% if '/employees/' in request.path %}active{% endif %}">
+      <i class="bi bi-person-badge-fill"></i><span>Employees</span>
+    </a>
+    <a href="{% url 'locations:admin_map' %}" class="nav-item {% if 'map' in request.path %}active{% endif %}">
+      <i class="bi bi-map-fill"></i><span>Location Map</span>
+    </a>
+    <a href="{% url 'reports:home' %}" class="nav-item {% if '/reports/' in request.path %}active{% endif %}">
+      <i class="bi bi-bar-chart-fill"></i><span>Reports</span>
+    </a>
+    <a href="{% url 'notifications:announcement' %}" class="nav-item">
+      <i class="bi bi-broadcast"></i><span>Announcements</span>
+    </a>
+    <a href="{% url 'accounts:activity_log' %}" class="nav-item">
+      <i class="bi bi-activity"></i><span>Activity Log</span>
+    </a>
+    {% endif %}
+  </nav>
+
+  <div class="sidebar-footer">
+    <a href="{% url 'accounts:profile' %}" class="nav-item">
+      <i class="bi bi-person-circle"></i><span>My Profile</span>
+    </a>
+    <a href="{% url 'accounts:logout' %}" class="nav-item text-danger-soft">
+      <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+    </a>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ══════════════════════════════════════════════ MAIN WRAPPER ══ -->
+<div class="main-wrapper" id="mainWrapper">
+
+  <header class="top-navbar">
+    <div class="navbar-left">
+      <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
+      <div class="page-breadcrumb">
+        {% block breadcrumb %}<span class="breadcrumb-item">Dashboard</span>{% endblock %}
+      </div>
+    </div>
+    <div class="navbar-right">
+      {% if not user.is_admin %}
+      <div class="attendance-widget" id="attendanceWidget">
+        <span class="att-status" id="attStatus">Loading...</span>
+        <button class="btn btn-sm btn-success" id="checkInBtn" style="display:none">
+          <i class="bi bi-box-arrow-in-right"></i> Check In
+        </button>
+        <button class="btn btn-sm btn-warning" id="checkOutBtn" style="display:none">
+          <i class="bi bi-box-arrow-right"></i> Check Out
+        </button>
+      </div>
+      {% endif %}
+
+      <!-- Notifications Bell -->
+      <div class="dropdown">
+        <button class="navbar-icon-btn" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-bell-fill"></i>
+          {% if unread_notification_count > 0 %}
+          <span class="notif-badge">{{ unread_notification_count }}</span>
+          {% endif %}
+        </button>
+        <div class="dropdown-menu dropdown-menu-end notif-dropdown">
+          <div class="notif-header">
+            <span class="fw-600">Notifications</span>
+            {% if unread_notification_count > 0 %}
+            <button class="btn-link-sm" id="markAllRead">Mark all read</button>
+            {% endif %}
+          </div>
+          <div class="notif-list" id="notifList">
+            {% for notif in recent_notifications %}
+            <div class="notif-item {% if not notif.is_read %}unread{% endif %}">
+              <div class="notif-icon"><i class="bi {{ notif.icon }}"></i></div>
+              <div class="notif-body">
+                <div class="notif-title">{{ notif.title }}</div>
+                <div class="notif-msg">{{ notif.message|truncatechars:60 }}</div>
+                <div class="notif-time">{{ notif.created_at|timesince }} ago</div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="notif-empty"><i class="bi bi-bell-slash"></i><p>No notifications</p></div>
+            {% endfor %}
+          </div>
+          <div class="notif-footer"><a href="{% url 'notifications:list' %}">View all</a></div>
+        </div>
+      </div>
+
+      <!-- User menu -->
+      <div class="dropdown">
+        <button class="user-menu-btn" data-bs-toggle="dropdown">
+          <div class="user-avatar-xs">
+            {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="{{ user.full_name }}" />
+            {% else %}{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}{% endif %}
+          </div>
+          <span class="user-menu-name d-none d-md-inline">{{ user.first_name }}</span>
+          <i class="bi bi-chevron-down ms-1"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li class="dropdown-header">
+            <div class="fw-600">{{ user.get_full_name }}</div>
+            <small class="text-muted">{{ user.email }}</small>
+          </li>
+          <li><hr class="dropdown-divider" /></li>
+          <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person me-2"></i>My Profile</a></li>
+          <li><a class="dropdown-item" href="{% url 'accounts:change_password' %}"><i class="bi bi-shield-lock me-2"></i>Change Password</a></li>
+          <li><a class="dropdown-item" href="{% url 'attendance:my_attendance' %}"><i class="bi bi-clock me-2"></i>My Attendance</a></li>
+          <li><hr class="dropdown-divider" /></li>
+          <li><a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-content">
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999" id="toastContainer"></div>
+
+    {% if messages %}
+    <div class="messages-container">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show crm-alert" role="alert">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% elif message.tags == 'error' or message.tags == 'danger' %}bi-exclamation-circle-fill{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="page-footer">
+    <span>&copy; {% now "Y" %} Novem Controls. All rights reserved.</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/crm.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

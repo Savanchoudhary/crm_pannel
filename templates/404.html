@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Page Not Found — Novem Controls CRM{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <div style="font-size:80px;line-height:1;color:var(--primary);opacity:.3;font-weight:800;">404</div>
+  <h3 class="fw-700 mt-3">Page Not Found</h3>
+  <p class="text-muted fs-14 mt-2">The page you're looking for doesn't exist or has been moved.</p>
+  <a href="{% url 'dashboard:index' %}" class="btn btn-primary mt-3">
+    <i class="bi bi-house-fill me-2"></i>Back to Dashboard
+  </a>
+</div>
+{% endblock %}

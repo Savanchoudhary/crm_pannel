@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% load crm_tags humanize %}
+{% block title %}Leads — Novem Controls CRM{% endblock %}
+
+{% block breadcrumb %}
+<i class="bi bi-people-fill me-1 text-muted"></i>
+<span class="breadcrumb-item">Leads</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Leads</h1>
+    <p class="page-subtitle">{{ stats.total|intcomma }} total leads</p>
+  </div>
+  <div class="page-actions">
+    {% if user.is_admin %}
+    <a href="{% url 'leads:excel_upload' %}" class="btn btn-outline-success">
+      <i class="bi bi-file-earmark-spreadsheet"></i> Import Excel
+    </a>
+    <a href="{% url 'leads:excel_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-outline-secondary">
+      <i class="bi bi-download"></i> Export
+    </a>
+    {% endif %}
+    <a href="{% url 'leads:create' %}" class="btn btn-primary">
+      <i class="bi bi-person-plus"></i> Add Lead
+    </a>
+  </div>
+</div>
+
+<!-- Stats Strip -->
+<div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:16px;">
+  <div class="stat-card py-3">
+    <div class="stat-icon secondary"><i class="bi bi-people"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.total|intcomma }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+  </div>
+  <div class="stat-card py-3">
+    <div class="stat-icon warning"><i class="bi bi-hourglass-split"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.pending }}</div>
+      <div class="stat-label">Pending</div>
+    </div>
+  </div>
+  <div class="stat-card py-3">
+    <div class="stat-icon success"><i class="bi bi-hand-thumbs-up"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.interested }}</div>
+      <div class="stat-label">Interested</div>
+    </div>
+  </div>
+  <div class="stat-card py-3">
+    <div class="stat-icon danger"><i class="bi bi-hand-thumbs-down"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.not_interested }}</div>
+      <div class="stat-label">Not Interested</div>
+    </div>
+  </div>
+  <div class="stat-card py-3">
+    <div class="stat-icon info"><i class="bi bi-calendar-check"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.follow_up }}</div>
+      <div class="stat-label">Follow-ups</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="crm-table-wrapper">
+  <div class="crm-table-header" style="flex-wrap:wrap; gap:12px;">
+    <!-- Search -->
+    <form method="get" class="d-flex align-items-center gap-2 flex-grow-1" style="min-width:200px; max-width:320px;">
+      <div class="search-bar flex-grow-1">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" name="q" class="form-control" placeholder="Search name, phone, company..." value="{{ search }}" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Search</button>
+    </form>
+
+    <!-- Filters -->
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center" id="filterForm">
+      {% if search %}<input type="hidden" name="q" value="{{ search }}" />{% endif %}
+      <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if user.is_admin %}
+      <select name="assigned_to" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Employees</option>
+        {% for emp in employees %}
+        <option value="{{ emp.id }}" {% if assigned_filter == emp.id|stringformat:"s" %}selected{% endif %}>{{ emp.full_name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      {% if status_filter or search or assigned_filter %}
+      <a href="{% url 'leads:list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-x-circle"></i> Clear
+      </a>
+      {% endif %}
+    </form>
+
+    {% if user.is_admin %}
+    <!-- Bulk assign -->
+    <button class="btn btn-sm btn-outline-primary" id="bulkAssignBtn" style="display:none"
+            data-bs-toggle="modal" data-bs-target="#assignModal">
+      <i class="bi bi-person-check"></i> Assign Selected
+    </button>
+    {% endif %}
+  </div>
+
+  <!-- Table -->
+  <div class="table-responsive">
+    <table class="crm-table" id="leadsTable">
+      <thead>
+        <tr>
+          {% if user.is_admin %}<th><input type="checkbox" id="selectAll" /></th>{% endif %}
+          <th>#</th>
+          <th>Lead</th>
+          <th>Phone</th>
+          <th>Company</th>
+          <th>Status</th>
+          <th>Assigned To</th>
+          <th>Last Call</th>
+          <th>Source</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr>
+          {% if user.is_admin %}
+          <td><input type="checkbox" class="lead-checkbox" value="{{ lead.id }}" /></td>
+          {% endif %}
+          <td class="text-muted fs-12">{{ lead.id }}</td>
+          <td>
+            <div class="fw-600 fs-13">{{ lead.name }}</div>
+            {% if lead.email %}<div class="text-muted fs-12">{{ lead.email }}</div>{% endif %}
+          </td>
+          <td><a href="tel:{{ lead.phone }}" class="fw-500 fs-13">{{ lead.phone }}</a></td>
+          <td class="text-muted fs-13">{{ lead.company|default:"—" }}</td>
+          <td>
+            <span class="status-badge {{ lead.status|lower }}" id="leadStatus_{{ lead.id }}">
+              {{ lead.get_status_display }}
+            </span>
+          </td>
+          <td>
+            {% if lead.assigned_to %}
+            <div class="d-flex align-items-center gap-1">
+              <div class="avatar avatar-sm">{{ lead.assigned_to.first_name|first|upper }}{{ lead.assigned_to.last_name|first|upper }}</div>
+              <span class="fs-12">{{ lead.assigned_to.first_name }}</span>
+            </div>
+            {% else %}
+            <span class="text-muted fs-12">Unassigned</span>
+            {% endif %}
+          </td>
+          <td class="text-muted fs-12">
+            {% if lead.last_called_at %}{{ lead.last_called_at|timesince }} ago{% else %}—{% endif %}
+          </td>
+          <td><span class="badge bg-light text-dark fs-12">{{ lead.get_source_display }}</span></td>
+          <td class="actions">
+            <a href="{% url 'leads:detail' lead.pk %}" class="btn btn-xs btn-outline-primary" data-bs-toggle="tooltip" title="View">
+              <i class="bi bi-eye"></i>
+            </a>
+            {% if not user.is_admin %}
+            <button class="btn btn-xs btn-success" onclick="startCall({{ lead.pk }})" id="startCallBtn_{{ lead.pk }}">
+              <i class="bi bi-telephone-fill"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10">
+            <div class="table-empty">
+              <i class="bi bi-people"></i>
+              <p>No leads found{% if search %} for "{{ search }}"{% endif %}</p>
+              {% if user.is_admin %}
+              <a href="{% url 'leads:excel_upload' %}" class="btn btn-sm btn-primary mt-2">Import from Excel</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  {% if leads.paginator.num_pages > 1 %}
+  <div class="crm-pagination">
+    <span class="pagination-info">
+      Showing {{ leads.start_index }}–{{ leads.end_index }} of {{ leads.paginator.count|intcomma }}
+    </span>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if leads.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ leads.previous_page_number }}&{{ request.GET.urlencode }}">‹</a></li>
+        {% endif %}
+        {% for num in leads.paginator.page_range %}
+          {% if leads.number == num %}
+          <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+          {% elif num > leads.number|add:"-3" and num < leads.number|add:"3" %}
+          <li class="page-item"><a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a></li>
+          {% endif %}
+        {% endfor %}
+        {% if leads.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ leads.next_page_number }}&{{ request.GET.urlencode }}">›</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Assign Modal -->
+{% if user.is_admin %}
+<div class="modal fade" id="assignModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="post" action="{% url 'leads:assign' %}">
+      {% csrf_token %}
+      <div id="selectedLeadsInputs"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title"><i class="bi bi-person-check me-2"></i>Assign Leads to Employee</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted fs-13 mb-3"><span id="selectedCount">0</span> leads selected.</p>
+          <div class="mb-3">
+            <label class="form-label">Assign To</label>
+            <select name="assigned_to" class="form-select" required>
+              <option value="">Select Employee...</option>
+              {% for emp in employees %}
+              <option value="{{ emp.id }}">{{ emp.full_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Assign Leads</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Bulk select
+const selectAll   = document.getElementById('selectAll');
+const bulkBtn     = document.getElementById('bulkAssignBtn');
+const countEl     = document.getElementById('selectedCount');
+const hiddenInputs= document.getElementById('selectedLeadsInputs');
+
+function updateBulk() {
+  const checked = document.querySelectorAll('.lead-checkbox:checked');
+  if (bulkBtn) bulkBtn.style.display = checked.length > 0 ? '' : 'none';
+  if (countEl)  countEl.textContent = checked.length;
+  if (hiddenInputs) {
+    hiddenInputs.innerHTML = '';
+    checked.forEach(cb => {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = 'lead_ids'; inp.value = cb.value;
+      hiddenInputs.appendChild(inp);
+    });
+  }
+}
+
+if (selectAll) selectAll.addEventListener('change', function() {
+  document.querySelectorAll('.lead-checkbox').forEach(cb => cb.checked = this.checked);
+  updateBulk();
+});
+document.querySelectorAll('.lead-checkbox').forEach(cb => cb.addEventListener('change', updateBulk));
+</script>
+{% endblock %}

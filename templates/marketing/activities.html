@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Activities — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Activities</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Marketing Activities</h1>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'marketing:activity_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Log Activity
+    </a>
+  </div>
+</div>
+
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center w-100">
+      <div class="search-bar" style="width:220px;">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" name="q" class="form-control" placeholder="Search activities..." value="{{ search }}" />
+      </div>
+      <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Status</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+      {% if search or status_filter %}
+      <a href="{% url 'marketing:activities' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          {% if user.is_admin %}<th>Employee</th>{% endif %}
+          <th>Date</th>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Location</th>
+          <th>Contacts</th>
+          <th>Leads</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for act in activities %}
+        <tr>
+          {% if user.is_admin %}
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar avatar-sm">{{ act.employee.first_name|first|upper }}</div>
+              <span class="fs-12">{{ act.employee.first_name }}</span>
+            </div>
+          </td>
+          {% endif %}
+          <td class="fw-600 fs-13">{{ act.date|date:"M j, Y" }}</td>
+          <td>
+            <div class="fw-600 fs-13">{{ act.title }}</div>
+            {% if act.description %}<div class="text-muted fs-12">{{ act.description|truncatechars:40 }}</div>{% endif %}
+          </td>
+          <td><span class="badge bg-light text-dark">{{ act.get_activity_type_display }}</span></td>
+          <td class="text-muted fs-12">{{ act.location|default:"—" }}</td>
+          <td class="fw-600 text-center">{{ act.contacts_met }}</td>
+          <td class="fw-600 text-success text-center">{{ act.leads_generated }}</td>
+          <td><span class="status-badge {{ act.status|lower }}">{{ act.get_status_display }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8"><div class="table-empty"><i class="bi bi-megaphone"></i><p>No activities found.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if activities.paginator.num_pages > 1 %}
+  <div class="crm-pagination">
+    <span class="pagination-info">{{ activities.start_index }}–{{ activities.end_index }} of {{ activities.paginator.count }}</span>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if activities.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ activities.previous_page_number }}&{{ request.GET.urlencode }}">‹</a></li>{% endif %}
+      {% if activities.has_next %}<li class="page-item"><a class="page-link" href="?page={{ activities.next_page_number }}&{{ request.GET.urlencode }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

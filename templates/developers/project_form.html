@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ action|default:"Create" }} Project — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'developers:projects' %}" class="text-muted">Projects</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">{{ action|default:"Create" }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">{{ action|default:"Create" }} Project</h1>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-7">
+    <div class="crm-form-card">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Project Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control"
+                   placeholder="e.g. CRM Phase 2" required
+                   value="{{ project.name|default:'' }}" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="3"
+                      placeholder="What is this project about?">{{ project.description|default:'' }}</textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Start Date</label>
+            <input type="date" name="start_date" class="form-control"
+                   value="{{ project.start_date|default:'' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">End Date</label>
+            <input type="date" name="end_date" class="form-control"
+                   value="{{ project.end_date|default:'' }}" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Team Members</label>
+            <select name="team_members" class="form-select" multiple size="6">
+              {% for dev in developers %}
+              <option value="{{ dev.id }}"
+                {% if project and dev in project.team_members.all %}selected{% endif %}>
+                {{ dev.full_name }} ({{ dev.get_role_display }})
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Hold Ctrl/Cmd to select multiple</div>
+          </div>
+        </div>
+        <div class="mt-4 d-flex gap-3">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-check-circle me-2"></i>{{ action|default:"Create" }} Project
+          </button>
+          <a href="{% url 'developers:projects' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

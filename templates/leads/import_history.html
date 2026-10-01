@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Import History — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'leads:list' %}" class="text-muted">Leads</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">Import History</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Excel Import History</h1>
+    <p class="page-subtitle">All past Excel imports and their results.</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'leads:excel_upload' %}" class="btn btn-success">
+      <i class="bi bi-file-earmark-spreadsheet"></i> New Import
+    </a>
+  </div>
+</div>
+
+<div class="crm-table-wrapper">
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>File Name</th>
+          <th>Uploaded By</th>
+          <th>Date</th>
+          <th>Total</th>
+          <th>Imported</th>
+          <th>Duplicates</th>
+          <th>Invalid</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for imp in imports %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-file-earmark-spreadsheet text-success fs-5"></i>
+              <span class="fw-600 fs-13">{{ imp.file_name }}</span>
+            </div>
+          </td>
+          <td class="fs-13">{{ imp.uploaded_by.full_name|default:"—" }}</td>
+          <td class="text-muted fs-12">{{ imp.created_at|date:"M j, Y H:i" }}</td>
+          <td class="fw-700">{{ imp.total_rows|intcomma }}</td>
+          <td><span class="text-success fw-700">{{ imp.imported_rows|intcomma }}</span></td>
+          <td><span class="text-warning fw-600">{{ imp.duplicate_rows }}</span></td>
+          <td><span class="text-danger fw-600">{{ imp.invalid_rows }}</span></td>
+          <td>
+            <span class="status-badge {% if imp.status == 'COMPLETED' %}interested{% elif imp.status == 'FAILED' %}not_interested{% else %}pending{% endif %}">
+              {{ imp.status }}
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">
+            <div class="table-empty">
+              <i class="bi bi-file-earmark-x"></i>
+              <p>No imports yet. <a href="{% url 'leads:excel_upload' %}">Start your first import</a>.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if imports.paginator.num_pages > 1 %}
+  <div class="crm-pagination">
+    <span class="pagination-info">{{ imports.start_index }}–{{ imports.end_index }} of {{ imports.paginator.count }}</span>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if imports.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ imports.previous_page_number }}">‹</a></li>{% endif %}
+      {% if imports.has_next %}<li class="page-item"><a class="page-link" href="?page={{ imports.next_page_number }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

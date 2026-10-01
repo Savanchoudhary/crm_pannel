@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Log Activity — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'marketing:activities' %}" class="text-muted">Activities</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">Log Activity</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Log Field Activity</h1>
+    <p class="page-subtitle">Record your marketing activity for today.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-7">
+    <div class="crm-form-card">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Activity Type <span class="text-danger">*</span></label>
+            <select name="activity_type" class="form-select" required>
+              {% for val, label in type_choices %}
+              <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Date <span class="text-danger">*</span></label>
+            <input type="date" name="date" class="form-control" value="{{ today }}" required />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Title <span class="text-danger">*</span></label>
+            <input type="text" name="title" class="form-control" placeholder="e.g. Field Visit at Shivaji Nagar" required />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-control" rows="3" placeholder="What did you do? Who did you meet?"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Location</label>
+            <input type="text" name="location" class="form-control" placeholder="e.g. Shivaji Nagar, Pune" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Start Time</label>
+            <input type="time" name="start_time" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">End Time</label>
+            <input type="time" name="end_time" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Contacts Met</label>
+            <input type="number" name="contacts_met" class="form-control" value="0" min="0" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Leads Generated</label>
+            <input type="number" name="leads_generated" class="form-control" value="0" min="0" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="Any additional observations..."></textarea>
+          </div>
+        </div>
+        <div class="mt-4 d-flex gap-3">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle me-2"></i>Save Activity
+          </button>
+          <a href="{% url 'marketing:activities' %}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

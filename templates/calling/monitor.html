@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Call Monitor — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Call Monitor</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Call Monitor</h1>
+    <p class="page-subtitle">Monitor all calling activity across your team.</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'reports:calling' %}" class="btn btn-outline-primary">
+      <i class="bi bi-bar-chart"></i> Full Report
+    </a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon primary"><i class="bi bi-telephone-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-label">Total Calls</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon success"><i class="bi bi-hand-thumbs-up-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.interested }}</div>
+      <div class="stat-label">Interested</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon danger"><i class="bi bi-hand-thumbs-down-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.not_interested }}</div>
+      <div class="stat-label">Not Interested</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warning"><i class="bi bi-telephone-x-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.no_answer }}</div>
+      <div class="stat-label">No Answer</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon info"><i class="bi bi-clock-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ stats.total_duration|default:0|floatformat:0 }}s</div>
+      <div class="stat-label">Total Duration</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center w-100">
+      <select name="employee" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Employees</option>
+        {% for emp in calling_employees %}
+        <option value="{{ emp.id }}" {% if employee_filter == emp.id|stringformat:"s" %}selected{% endif %}>{{ emp.full_name }}</option>
+        {% endfor %}
+      </select>
+      <input type="date" name="date_from" class="form-control form-control-sm" style="width:auto;" value="{{ date_from }}" />
+      <span class="text-muted fs-12">to</span>
+      <input type="date" name="date_to" class="form-control form-control-sm" style="width:auto;" value="{{ date_to }}" />
+      <select name="result" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Results</option>
+        {% for val, label in result_choices %}
+        <option value="{{ val }}" {% if result_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+      <a href="{% url 'calling:monitor' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Lead</th>
+          <th>Date</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Duration</th>
+          <th>Result</th>
+          <th>Interested</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for call in calls %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar avatar-sm">{{ call.employee.first_name|first|upper }}{{ call.employee.last_name|first|upper }}</div>
+              <span class="fs-13 fw-500">{{ call.employee.first_name }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="fw-600 fs-13">{{ call.lead.name }}</div>
+            <div class="text-muted fs-12">{{ call.lead.phone }}</div>
+          </td>
+          <td class="fs-12 text-muted">{{ call.started_at|date:"M j, Y" }}</td>
+          <td class="fs-13">{{ call.started_at|time:"H:i:s" }}</td>
+          <td class="fs-13">{% if call.ended_at %}{{ call.ended_at|time:"H:i:s" }}{% else %}<span class="text-success">Active</span>{% endif %}</td>
+          <td class="fw-600">{{ call.duration_display }}</td>
+          <td><span class="status-badge {{ call.result|lower }}">{{ call.get_result_display }}</span></td>
+          <td>
+            {% if call.is_interested == True %}<span class="badge bg-success">Yes</span>
+            {% elif call.is_interested == False %}<span class="badge bg-danger">No</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-muted fs-12">{{ call.notes|truncatechars:40|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9"><div class="table-empty"><i class="bi bi-telephone-x"></i><p>No calls found for this filter.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if calls.paginator.num_pages > 1 %}
+  <div class="crm-pagination">
+    <span class="pagination-info">Showing {{ calls.start_index }}–{{ calls.end_index }} of {{ calls.paginator.count }}</span>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if calls.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ calls.previous_page_number }}&{{ request.GET.urlencode }}">‹</a></li>{% endif %}
+      {% if calls.has_next %}<li class="page-item"><a class="page-link" href="?page={{ calls.next_page_number }}&{{ request.GET.urlencode }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

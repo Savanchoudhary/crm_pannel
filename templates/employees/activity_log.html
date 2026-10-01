@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Activity Log — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Activity Log</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Activity Log</h1>
+    <p class="page-subtitle">Complete audit trail of all user actions.</p>
+  </div>
+</div>
+
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center w-100">
+      <select name="user" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Employees</option>
+        {% for emp in users %}
+        <option value="{{ emp.id }}" {% if user_filter == emp.id|stringformat:"s" %}selected{% endif %}>{{ emp.get_full_name }}</option>
+        {% endfor %}
+      </select>
+      <select name="action" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Actions</option>
+        {% for val, label in action_choices %}
+        <option value="{{ val }}" {% if action_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <input type="date" name="date_from" class="form-control form-control-sm" style="width:auto;" value="{{ request.GET.date_from }}" />
+      <input type="date" name="date_to" class="form-control form-control-sm" style="width:auto;" value="{{ request.GET.date_to }}" />
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+      <a href="{% url 'accounts:activity_log' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr><th>User</th><th>Action</th><th>Description</th><th>Module</th><th>IP Address</th><th>Date & Time</th></tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>
+            {% if log.user %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar avatar-sm">{{ log.user.first_name|first|upper }}{{ log.user.last_name|first|upper }}</div>
+              <span class="fs-13 fw-500">{{ log.user.get_full_name }}</span>
+            </div>
+            {% else %}<span class="text-muted fs-12">System</span>{% endif %}
+          </td>
+          <td>
+            <span class="badge
+              {% if log.action == 'LOGIN' %}bg-success
+              {% elif log.action == 'LOGOUT' %}bg-secondary
+              {% elif log.action == 'CREATE' %}bg-primary
+              {% elif log.action == 'UPDATE' %}bg-info
+              {% elif log.action == 'DELETE' %}bg-danger
+              {% elif log.action == 'UPLOAD' %}bg-warning text-dark
+              {% elif log.action == 'ASSIGN' %}bg-purple
+              {% else %}bg-light text-dark{% endif %}" style="font-size:10px;">
+              {{ log.action }}
+            </span>
+          </td>
+          <td class="fs-13">{{ log.description|truncatechars:80 }}</td>
+          <td class="text-muted fs-12">{{ log.model_name|default:"—" }}</td>
+          <td class="text-muted fs-12">{{ log.ip_address|default:"—" }}</td>
+          <td class="text-muted fs-12">{{ log.created_at|date:"M j, Y H:i:s" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="table-empty"><i class="bi bi-journal-x"></i><p>No activity logs found.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if logs.paginator.num_pages > 1 %}
+  <div class="crm-pagination">
+    <span class="pagination-info">{{ logs.start_index }}–{{ logs.end_index }} of {{ logs.paginator.count }}</span>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if logs.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ logs.previous_page_number }}&{{ request.GET.urlencode }}">‹</a></li>{% endif %}
+      {% if logs.has_next %}<li class="page-item"><a class="page-link" href="?page={{ logs.next_page_number }}&{{ request.GET.urlencode }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

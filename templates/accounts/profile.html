@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}My Profile — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">My Profile</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">My Profile</h1>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Profile Card -->
+  <div class="col-12 col-lg-4">
+    <div class="crm-card text-center">
+      <div class="crm-card-body py-4">
+        <div class="avatar avatar-xl mx-auto mb-3">
+          {% if user.avatar %}
+            <img src="{{ user.avatar.url }}" alt="{{ user.full_name }}" />
+          {% else %}
+            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+          {% endif %}
+        </div>
+        <h5 class="fw-700 mb-1">{{ user.get_full_name }}</h5>
+        <p class="text-muted fs-13 mb-2">{{ user.email }}</p>
+        <span class="badge {% if user.role == 'ADMIN' %}bg-danger{% elif user.role == 'CALLING' %}bg-primary{% elif user.role == 'MARKETING' %}bg-success{% else %}bg-warning text-dark{% endif %} mb-3">
+          {{ user.get_role_display }}
+        </span>
+        {% if profile %}
+        <div class="border-top pt-3 mt-1">
+          <div class="row g-2 text-start fs-13">
+            {% if profile.employee_id %}
+            <div class="col-12 d-flex gap-2">
+              <span class="text-muted" style="min-width:100px;">Employee ID</span>
+              <span class="fw-600">{{ profile.employee_id }}</span>
+            </div>
+            {% endif %}
+            {% if profile.department %}
+            <div class="col-12 d-flex gap-2">
+              <span class="text-muted" style="min-width:100px;">Department</span>
+              <span class="fw-600">{{ profile.department.name }}</span>
+            </div>
+            {% endif %}
+            {% if profile.designation %}
+            <div class="col-12 d-flex gap-2">
+              <span class="text-muted" style="min-width:100px;">Designation</span>
+              <span class="fw-600">{{ profile.designation }}</span>
+            </div>
+            {% endif %}
+            {% if profile.date_of_joining %}
+            <div class="col-12 d-flex gap-2">
+              <span class="text-muted" style="min-width:100px;">Joined</span>
+              <span class="fw-600">{{ profile.date_of_joining|date:"M j, Y" }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Quick links -->
+    <div class="crm-card mt-4">
+      <div class="crm-card-header"><h5 class="crm-card-title"><i class="bi bi-lightning-fill"></i> Quick Links</h5></div>
+      <div class="crm-card-body p-0">
+        <a href="{% url 'accounts:change_password' %}" class="nav-item d-flex align-items-center gap-2 px-3 py-2 border-bottom text-decoration-none" style="color:var(--text-primary);">
+          <i class="bi bi-shield-lock text-primary"></i> Change Password
+        </a>
+        <a href="{% url 'attendance:my_attendance' %}" class="nav-item d-flex align-items-center gap-2 px-3 py-2 border-bottom text-decoration-none" style="color:var(--text-primary);">
+          <i class="bi bi-clock-history text-info"></i> My Attendance
+        </a>
+        <a href="{% url 'notifications:list' %}" class="nav-item d-flex align-items-center gap-2 px-3 py-2 text-decoration-none" style="color:var(--text-primary);">
+          <i class="bi bi-bell text-warning"></i> Notifications
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Form -->
+  <div class="col-12 col-lg-8">
+    <div class="crm-form-card mb-4">
+      <h5 class="fw-700 mb-4"><i class="bi bi-pencil-fill text-primary me-2"></i>Edit Profile</h5>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">First Name</label>
+            <input type="text" name="first_name" class="form-control" value="{{ user.first_name }}" required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Last Name</label>
+            <input type="text" name="last_name" class="form-control" value="{{ user.last_name }}" required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone</label>
+            <input type="tel" name="phone" class="form-control" value="{{ user.phone }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Profile Photo</label>
+            <input type="file" name="avatar" class="form-control" accept="image/*" />
+          </div>
+        </div>
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle me-2"></i>Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-activity"></i> Recent Activity</h5>
+      </div>
+      <div class="crm-card-body p-0">
+        {% for log in activity %}
+        <div class="d-flex align-items-start gap-3 px-3 py-2 border-bottom">
+          <div class="pt-1">
+            <i class="bi bi-circle-fill text-primary" style="font-size:8px;"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="fs-13">{{ log.description }}</div>
+            <div class="text-muted fs-12">{{ log.created_at|timesince }} ago
+              {% if log.ip_address %} · {{ log.ip_address }}{% endif %}
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-4 text-muted fs-13">No activity recorded yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

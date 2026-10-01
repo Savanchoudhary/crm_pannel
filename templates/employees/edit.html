@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Edit Employee — {{ employee.get_full_name }}{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'accounts:employee_list' %}" class="text-muted">Employees</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<a href="{% url 'accounts:employee_detail' employee.pk %}" class="text-muted">{{ employee.get_full_name }}</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">Edit</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Edit Employee</h1>
+    <p class="page-subtitle">{{ employee.get_full_name }}</p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <div class="row g-4">
+    <div class="col-12 col-lg-7">
+      <div class="crm-form-card mb-4">
+        <h6 class="fw-700 mb-4 text-uppercase text-muted" style="font-size:11px;letter-spacing:.06em;">Account Details</h6>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">First Name</label>
+            {{ user_form.first_name }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Last Name</label>
+            {{ user_form.last_name }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            {{ user_form.email }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone</label>
+            {{ user_form.phone }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Role</label>
+            {{ user_form.role }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Profile Photo</label>
+            {{ user_form.avatar }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Active</label>
+            <div class="form-check mt-1">
+              {{ user_form.is_active }}
+              <label class="form-check-label">Account is active</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="crm-form-card">
+        <h6 class="fw-700 mb-4 text-uppercase text-muted" style="font-size:11px;letter-spacing:.06em;">Employment Details</h6>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Department</label>
+            {{ profile_form.department }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Designation</label>
+            {{ profile_form.designation }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Date of Joining</label>
+            {{ profile_form.date_of_joining }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Status</label>
+            {{ profile_form.status }}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Address</label>
+            {{ profile_form.address }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Emergency Contact</label>
+            {{ profile_form.emergency_contact }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-5">
+      <div class="crm-card mb-4">
+        <div class="crm-card-header"><h5 class="crm-card-title"><i class="bi bi-shield-check-fill"></i> Extra Permissions</h5></div>
+        <div class="crm-card-body">
+          <div class="form-check mb-2">
+            {{ profile_form.can_view_calling }}
+            <label class="form-check-label fs-13">Can view Calling data</label>
+          </div>
+          <div class="form-check mb-2">
+            {{ profile_form.can_view_marketing }}
+            <label class="form-check-label fs-13">Can view Marketing data</label>
+          </div>
+          <div class="form-check">
+            {{ profile_form.can_view_developers }}
+            <label class="form-check-label fs-13">Can view Developer data</label>
+          </div>
+        </div>
+      </div>
+      <div class="crm-card mb-4">
+        <div class="crm-card-header"><h5 class="crm-card-title"><i class="bi bi-sticky-fill text-warning"></i> Notes</h5></div>
+        <div class="crm-card-body">{{ profile_form.notes }}</div>
+      </div>
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary btn-lg">
+          <i class="bi bi-check-circle me-2"></i>Save Changes
+        </button>
+        <a href="{% url 'accounts:employee_detail' employee.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

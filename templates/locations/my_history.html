@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}My Location History{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">My Location</span>{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>#myMap { height: 380px; border-radius: var(--radius-lg); border:1px solid var(--border); }</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">My Location</h1>
+    <p class="page-subtitle">Track your own location only when you explicitly start it.</p>
+  </div>
+</div>
+
+<!-- Tracking Control Card -->
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-5">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-geo-alt-fill"></i> Location Tracking</h5>
+      </div>
+      <div class="crm-card-body text-center py-4">
+        <!-- Privacy notice -->
+        <div class="alert alert-info py-2 fs-12 text-start mb-4">
+          <i class="bi bi-shield-check me-1"></i>
+          <strong>Your privacy matters.</strong> Your location is only recorded while you have tracking active.
+          You can stop at any time.
+        </div>
+
+        <div id="trackingIndicator" class="tracking-indicator inactive mb-4" style="font-size:14px;padding:8px 18px;">
+          <span class="dot"></span> Not Tracking
+        </div>
+
+        <!-- Live coords display -->
+        <div id="liveCoords" class="mb-3 fs-12 text-muted" style="display:none;">
+          <div class="row g-2">
+            <div class="col-6 text-end text-muted">Latitude:</div>
+            <div class="col-6 text-start fw-600" id="myLat">—</div>
+            <div class="col-6 text-end text-muted">Longitude:</div>
+            <div class="col-6 text-start fw-600" id="myLng">—</div>
+            <div class="col-6 text-end text-muted">Accuracy:</div>
+            <div class="col-6 text-start fw-600" id="myAcc">—</div>
+          </div>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button id="startTrackingBtn" class="btn btn-success">
+            <i class="bi bi-geo-alt-fill me-2"></i>Start Location Tracking
+          </button>
+          <button id="stopTrackingBtn" class="btn btn-danger" style="display:none;">
+            <i class="bi bi-stop-circle me-2"></i>Stop Tracking
+          </button>
+        </div>
+        <div class="text-muted fs-12 mt-3">
+          Location is sent to server every 60 seconds while active.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's sessions -->
+  <div class="col-12 col-md-7">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-clock-history"></i> Today's Sessions</h5>
+        <form method="get" class="d-flex gap-2">
+          <input type="date" name="date" class="form-control form-control-sm" value="{{ date_filter }}" />
+          <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bi bi-search"></i></button>
+        </form>
+      </div>
+      <div class="crm-card-body p-0">
+        {% for session in sessions %}
+        <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+          <div class="stat-icon {% if session.is_active %}success{% else %}secondary{% endif %}"
+               style="width:36px;height:36px;font-size:14px;border-radius:8px;">
+            <i class="bi bi-geo-alt{% if session.is_active %}-fill{% endif %}"></i>
+          </div>
+          <div class="flex-grow-1">
+            <div class="fw-600 fs-13">Session #{{ forloop.counter }}</div>
+            <div class="text-muted fs-12">
+              Started: {{ session.started_at|time:"H:i" }}
+              {% if session.ended_at %} · Ended: {{ session.ended_at|time:"H:i" }} · {{ session.duration_display }}
+              {% else %} · <span class="text-success fw-600">Active</span>{% endif %}
+            </div>
+          </div>
+          {% if session.is_active %}
+          <span class="tracking-indicator active" style="padding:3px 8px;font-size:11px;">
+            <span class="dot"></span> Live
+          </span>
+          {% endif %}
+        </div>
+        {% empty %}
+        <div class="text-center py-4 text-muted fs-13">
+          No tracking sessions on {{ date_filter }}.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Map of recorded points -->
+{% if records %}
+<div class="crm-card mb-4">
+  <div class="crm-card-header">
+    <h5 class="crm-card-title"><i class="bi bi-map-fill"></i> Recorded Path — {{ date_filter }}</h5>
+    <span class="badge bg-primary">{{ records|length }} points</span>
+  </div>
+  <div class="crm-card-body p-0">
+    <div id="myMap"></div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+{% if records %}
+const points = [
+  {% for rec in records %}
+  [{{ rec.latitude }}, {{ rec.longitude }}]{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
+if (points.length) {
+  const map = L.map('myMap').setView(points[0], 14);
+  L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Tiles <a href="https://www.openstreetmap.de/">openstreetmap.de</a>',
+    maxZoom: 20
+  }).addTo(map);
+  L.polyline(points, { color: '#4f46e5', weight: 3, dashArray: '6,4' }).addTo(map);
+  L.marker(points[0]).addTo(map).bindPopup('Start');
+  if (points.length > 1) L.marker(points[points.length-1]).addTo(map).bindPopup('Last Point');
+  map.fitBounds(L.polyline(points).getBounds().pad(0.15));
+}
+{% endif %}
+
+// Show live coords when tracking starts
+const origStart = LocationTracker.start.bind(LocationTracker);
+document.addEventListener('DOMContentLoaded', () => {
+  const startBtn = document.getElementById('startTrackingBtn');
+  const liveCoords = document.getElementById('liveCoords');
+  if (startBtn) {
+    startBtn.addEventListener('click', () => {
+      if (liveCoords) liveCoords.style.display = '';
+    });
+  }
+});
+</script>
+{% endblock %}

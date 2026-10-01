@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Send Announcement — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Announcements</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Send Announcement</h1>
+    <p class="page-subtitle">Broadcast a message to all or selected employees.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-6">
+    <div class="crm-form-card">
+      <form id="announcementForm">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Target Audience</label>
+            <select name="target_role" id="targetRole" class="form-select">
+              <option value="">All Employees</option>
+              <option value="CALLING">HR Department</option>
+              <option value="MARKETING">Marketing Team</option>
+              <option value="DEVELOPER">Developers</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Title <span class="text-danger">*</span></label>
+            <input type="text" name="title" id="annTitle" class="form-control"
+                   placeholder="e.g. Monthly Meeting Reminder" required />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Message <span class="text-danger">*</span></label>
+            <textarea name="message" id="annMessage" class="form-control" rows="5"
+                      placeholder="Write your announcement here..." required></textarea>
+          </div>
+        </div>
+        <div class="mt-4">
+          <button type="submit" class="btn btn-danger px-4" id="sendBtn">
+            <i class="bi bi-broadcast me-2"></i>Send Announcement
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6 mt-4 mt-lg-0">
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-info-circle-fill"></i> How It Works</h5>
+      </div>
+      <div class="crm-card-body fs-13 text-muted">
+        <ul class="list-unstyled mb-0" style="line-height:2.2;">
+          <li><i class="bi bi-check-circle-fill text-success me-2"></i>All targeted employees will receive a notification.</li>
+          <li><i class="bi bi-check-circle-fill text-success me-2"></i>Notifications appear in the bell icon in the top bar.</li>
+          <li><i class="bi bi-check-circle-fill text-success me-2"></i>Employees can see them on their next login.</li>
+          <li><i class="bi bi-info-circle text-info me-2"></i>Leave Target blank to send to everyone.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('announcementForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('sendBtn');
+  const title = document.getElementById('annTitle').value.trim();
+  const message = document.getElementById('annMessage').value.trim();
+  const target_role = document.getElementById('targetRole').value;
+
+  if (!title || !message) { showToast('Title and message are required.', 'warning'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+
+  csrfPost('{% url "notifications:announcement" %}', { title, message, target_role }, data => {
+    if (data.status === 'sent') {
+      showToast(`Announcement sent to ${data.count} employee(s).`, 'success');
+      document.getElementById('annTitle').value = '';
+      document.getElementById('annMessage').value = '';
+    } else {
+      showToast(data.error || 'Failed to send.', 'error');
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-broadcast me-2"></i>Send Announcement';
+  }, () => {
+    showToast('Network error.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-broadcast me-2"></i>Send Announcement';
+  });
+});
+</script>
+{% endblock %}

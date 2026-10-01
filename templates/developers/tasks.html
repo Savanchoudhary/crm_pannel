@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Tasks — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Tasks</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Tasks</h1>
+  </div>
+  <div class="page-actions">
+    {% if user.is_admin %}
+    <a href="{% url 'developers:task_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> New Task
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center w-100">
+      <div class="search-bar" style="width:220px;">
+        <i class="bi bi-search search-icon"></i>
+        <input type="text" name="q" class="form-control" placeholder="Search tasks..." value="{{ search }}" />
+      </div>
+      <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Status</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="priority" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Priorities</option>
+        {% for val, label in priority_choices %}
+        <option value="{{ val }}" {% if priority_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% if user.is_admin %}
+      <select name="developer" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Developers</option>
+        {% for dev in developers %}
+        <option value="{{ dev.id }}" {% if dev_filter == dev.id|stringformat:"s" %}selected{% endif %}>{{ dev.full_name }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+      <a href="{% url 'developers:tasks' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Developer</th>
+          <th>Project</th>
+          <th>Priority</th>
+          <th>Due Date</th>
+          <th>Est. Hours</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+        <tr>
+          <td>
+            <div class="fw-600 fs-13">{{ task.title|truncatechars:50 }}</div>
+            {% if task.description %}<div class="text-muted fs-12">{{ task.description|truncatechars:40 }}</div>{% endif %}
+          </td>
+          <td>
+            {% if task.developer %}
+            <div class="d-flex align-items-center gap-1">
+              <div class="avatar avatar-sm">{{ task.developer.first_name|first|upper }}{{ task.developer.last_name|first|upper }}</div>
+              <span class="fs-12">{{ task.developer.first_name }}</span>
+            </div>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-muted fs-12">{{ task.project.name|default:"—" }}</td>
+          <td><span class="priority-badge {{ task.priority|lower }}">{{ task.get_priority_display }}</span></td>
+          <td>
+            {% if task.due_date %}
+            <span class="fs-13 {% if task.is_overdue %}text-danger fw-600{% endif %}">
+              {{ task.due_date }}{% if task.is_overdue %} ⚠{% endif %}
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="fs-13">{{ task.estimated_hours|default:"—" }}h</td>
+          <td>
+            <span class="status-badge {{ task.status|lower }}">{{ task.get_status_display }}</span>
+          </td>
+          <td>
+            <div class="dropdown">
+              <button class="btn btn-xs btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Status</button>
+              <ul class="dropdown-menu">
+                {% for val, label in status_choices %}
+                <li>
+                  <button class="dropdown-item {% if task.status == val %}fw-600{% endif %}"
+                          onclick="updateTaskStatus({{ task.pk }}, '{{ val }}')">{{ label }}</button>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8"><div class="table-empty"><i class="bi bi-kanban"></i><p>No tasks found.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if tasks.paginator.num_pages > 1 %}
+  <div class="crm-pagination">
+    <span class="pagination-info">{{ tasks.start_index }}–{{ tasks.end_index }} of {{ tasks.paginator.count }}</span>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if tasks.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ tasks.previous_page_number }}&{{ request.GET.urlencode }}">‹</a></li>{% endif %}
+      {% if tasks.has_next %}<li class="page-item"><a class="page-link" href="?page={{ tasks.next_page_number }}&{{ request.GET.urlencode }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

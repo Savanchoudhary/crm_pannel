@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Import Result — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'leads:list' %}" class="text-muted">Leads</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">Import Result</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Import Complete</h1>
+    <p class="page-subtitle">{{ import_obj.file_name }}</p>
+  </div>
+</div>
+
+<!-- Result Summary -->
+<div class="dashboard-grid" style="grid-template-columns:repeat(5,1fr); margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-icon primary"><i class="bi bi-table"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ import_obj.total_rows|intcomma }}</div><div class="stat-label">Total Rows</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon success"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ import_obj.imported_rows|intcomma }}</div><div class="stat-label">Imported</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warning"><i class="bi bi-files"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ import_obj.duplicate_rows }}</div><div class="stat-label">Duplicates Skipped</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon danger"><i class="bi bi-x-circle-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ import_obj.invalid_rows }}</div><div class="stat-label">Invalid Rows</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon {% if import_obj.status == 'COMPLETED' %}success{% else %}danger{% endif %}">
+      <i class="bi bi-{% if import_obj.status == 'COMPLETED' %}check2-all{% else %}exclamation-triangle{% endif %}"></i>
+    </div>
+    <div class="stat-body">
+      <div class="stat-value" style="font-size:18px;">{{ import_obj.status }}</div>
+      <div class="stat-label">Status</div>
+    </div>
+  </div>
+</div>
+
+<!-- Result Alert -->
+<div class="alert {% if import_obj.imported_rows > 0 %}alert-success{% else %}alert-warning{% endif %} mb-4">
+  <i class="bi bi-{% if import_obj.imported_rows > 0 %}check-circle-fill{% else %}exclamation-triangle-fill{% endif %} me-2"></i>
+  {% if import_obj.imported_rows > 0 %}
+    <strong>{{ import_obj.imported_rows }} leads</strong> successfully imported from <strong>{{ import_obj.file_name }}</strong>.
+    {% if import_obj.duplicate_rows > 0 %}{{ import_obj.duplicate_rows }} duplicate(s) were skipped.{% endif %}
+  {% else %}
+    No leads were imported. Please check the error details below.
+  {% endif %}
+</div>
+
+<!-- Invalid Rows -->
+{% if invalid_rows %}
+<div class="crm-card">
+  <div class="crm-card-header">
+    <h5 class="crm-card-title"><i class="bi bi-exclamation-triangle-fill text-danger"></i> Invalid / Skipped Rows (first 50)</h5>
+    <span class="badge bg-danger">{{ import_obj.invalid_rows }} total</span>
+  </div>
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Row #</th>
+          <th>Issues</th>
+          <th>Name</th>
+          <th>Phone</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in invalid_rows %}
+        <tr>
+          <td class="text-muted fw-600">{{ row.row }}</td>
+          <td>
+            {% for err in row.errors %}
+            <span class="badge bg-danger-subtle text-danger border border-danger me-1 fs-12">{{ err }}</span>
+            {% endfor %}
+          </td>
+          <td class="fs-13">{{ row.data.name|default:"—" }}</td>
+          <td class="fs-13">{{ row.data.phone|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Actions -->
+<div class="d-flex flex-wrap gap-3 mt-4">
+  <a href="{% url 'leads:list' %}" class="btn btn-primary">
+    <i class="bi bi-people-fill me-2"></i>View All Leads
+  </a>
+  <a href="{% url 'leads:excel_upload' %}" class="btn btn-outline-success">
+    <i class="bi bi-file-earmark-spreadsheet me-2"></i>Import Another File
+  </a>
+  <a href="{% url 'leads:import_history' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-clock-history me-2"></i>Import History
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Follow-ups{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Follow-ups</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Follow-ups</h1>
+  </div>
+</div>
+
+<div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom:16px;">
+  <div class="stat-card">
+    <div class="stat-icon info"><i class="bi bi-calendar-event"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ stats.today }}</div><div class="stat-label">Due Today</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon danger"><i class="bi bi-exclamation-triangle"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ stats.overdue }}</div><div class="stat-label">Overdue</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon warning"><i class="bi bi-hourglass-split"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ stats.pending }}</div><div class="stat-label">Upcoming</div></div>
+  </div>
+</div>
+
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <div class="d-flex gap-2">
+      <a href="?status=today" class="btn btn-sm {% if status_filter == 'today' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Today</a>
+      <a href="?status=overdue" class="btn btn-sm {% if status_filter == 'overdue' %}btn-danger{% else %}btn-outline-secondary{% endif %}">Overdue</a>
+      <a href="?status=pending" class="btn btn-sm {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Upcoming</a>
+      <a href="?status=completed" class="btn btn-sm {% if status_filter == 'completed' %}btn-success{% else %}btn-outline-secondary{% endif %}">Completed</a>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Lead</th>
+          {% if user.is_admin %}<th>Assigned To</th>{% endif %}
+          <th>Follow-up Date</th>
+          <th>Notes</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for fu in followups %}
+        <tr id="followup_{{ fu.id }}">
+          <td>
+            <div class="fw-600 fs-13">{{ fu.lead.name }}</div>
+            <div class="text-muted fs-12">{{ fu.lead.phone }}</div>
+          </td>
+          {% if user.is_admin %}
+          <td class="fs-13">{{ fu.assigned_to.full_name|default:"—" }}</td>
+          {% endif %}
+          <td class="fw-600 fs-13 {% if fu.is_overdue %}text-danger{% endif %}">
+            {{ fu.follow_up_date }}{% if fu.is_overdue %} ⚠{% endif %}
+          </td>
+          <td class="text-muted fs-12">{{ fu.notes|truncatechars:50|default:"—" }}</td>
+          <td>
+            {% if fu.is_completed %}<span class="status-badge completed">Completed</span>
+            {% elif fu.is_overdue %}<span class="status-badge not_interested">Overdue</span>
+            {% else %}<span class="status-badge follow_up">Pending</span>{% endif %}
+          </td>
+          <td>
+            <a href="{% url 'leads:detail' fu.lead.pk %}" class="btn btn-xs btn-outline-primary"><i class="bi bi-eye"></i></a>
+            {% if not fu.is_completed %}
+            <button class="btn btn-xs btn-success" onclick="completeFollowUp({{ fu.id }}, '')">
+              <i class="bi bi-check"></i> Done
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="table-empty"><i class="bi bi-calendar-check"></i><p>No follow-ups found.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

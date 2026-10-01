@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Location History — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}
+<a href="{% url 'locations:admin_map' %}" class="text-muted">Location Map</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">History</span>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>#historyMap { height: 400px; border-radius: var(--radius-lg); border:1px solid var(--border); }</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Location History</h1>
+    <p class="page-subtitle">View employee movement for a specific date.</p>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="crm-form-card mb-4">
+  <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
+    <div>
+      <label class="form-label">Employee</label>
+      <select name="employee" class="form-select" style="width:220px;">
+        <option value="">Select Employee</option>
+        {% for emp in employees %}
+        <option value="{{ emp.id }}" {% if employee_id == emp.id|stringformat:"s" %}selected{% endif %}>{{ emp.full_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="form-label">Date</label>
+      <input type="date" name="date" class="form-control" value="{{ date_filter }}" />
+    </div>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-search"></i> View History
+    </button>
+  </form>
+</div>
+
+{% if selected_employee %}
+<!-- Map -->
+{% if records %}
+<div class="crm-card mb-4">
+  <div class="crm-card-header">
+    <h5 class="crm-card-title">
+      <i class="bi bi-map-fill"></i>
+      {{ selected_employee.full_name }} — {{ date_filter }}
+    </h5>
+    <span class="badge bg-primary">{{ records|length }} points</span>
+  </div>
+  <div class="crm-card-body p-0">
+    <div id="historyMap"></div>
+  </div>
+</div>
+
+<!-- Points Table -->
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <span class="crm-table-title"><i class="bi bi-geo-alt text-primary"></i> Location Points</span>
+  </div>
+  <div class="table-responsive" style="max-height:320px;overflow-y:auto;">
+    <table class="crm-table">
+      <thead>
+        <tr><th>#</th><th>Time</th><th>Latitude</th><th>Longitude</th><th>Accuracy</th></tr>
+      </thead>
+      <tbody>
+        {% for rec in records %}
+        <tr>
+          <td class="text-muted fs-12">{{ forloop.counter }}</td>
+          <td class="fw-600 fs-13">{{ rec.timestamp|time:"H:i:s" }}</td>
+          <td class="fs-12">{{ rec.latitude|floatformat:6 }}</td>
+          <td class="fs-12">{{ rec.longitude|floatformat:6 }}</td>
+          <td class="text-muted fs-12">{% if rec.accuracy %}{{ rec.accuracy|floatformat:0 }}m{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="crm-card">
+  <div class="crm-card-body">
+    <div class="table-empty">
+      <i class="bi bi-geo"></i>
+      <p>No location data for {{ selected_employee.full_name }} on {{ date_filter }}.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+{% if records %}
+const points = [
+  {% for rec in records %}[{{ rec.latitude }}, {{ rec.longitude }}]{% if not forloop.last %},{% endif %}{% endfor %}
+];
+if (points.length) {
+  const map = L.map('historyMap').setView(points[0], 14);
+  L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Tiles <a href="https://www.openstreetmap.de/">openstreetmap.de</a>',
+    maxZoom: 20
+  }).addTo(map);
+  L.polyline(points, { color:'#4f46e5', weight:3, dashArray:'6,4' }).addTo(map);
+  L.marker(points[0]).addTo(map).bindPopup('Start').openPopup();
+  if (points.length > 1) L.marker(points[points.length-1]).addTo(map).bindPopup('Last Point');
+  map.fitBounds(L.polyline(points).getBounds().pad(0.2));
+}
+{% endif %}
+</script>
+{% endblock %}

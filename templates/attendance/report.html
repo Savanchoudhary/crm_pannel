@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}Attendance Report — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Attendance Report</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Attendance Report</h1>
+    <p class="page-subtitle">{{ today|date:"l, F j, Y" }}</p>
+  </div>
+</div>
+
+<!-- Today Summary -->
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon success"><i class="bi bi-person-check-fill"></i></div>
+      <div class="stat-body">
+        <div class="stat-value">{{ today_checkins }}</div>
+        <div class="stat-label">Checked In Today</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon primary"><i class="bi bi-calendar-check-fill"></i></div>
+      <div class="stat-body">
+        <div class="stat-value">{{ today_records.count }}</div>
+        <div class="stat-label">Records Today</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center w-100">
+      <select name="employee" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Employees</option>
+        {% for emp in employees %}
+        <option value="{{ emp.id }}" {% if emp_filter == emp.id|stringformat:"s" %}selected{% endif %}>{{ emp.user.full_name }}</option>
+        {% endfor %}
+      </select>
+      <input type="date" name="date_from" class="form-control form-control-sm" style="width:auto;" value="{{ date_from }}" />
+      <span class="text-muted fs-12">to</span>
+      <input type="date" name="date_to" class="form-control form-control-sm" style="width:auto;" value="{{ date_to }}" />
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel"></i> Filter</button>
+      <a href="{% url 'attendance:report' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Check In</th>
+          <th>Check Out</th>
+          <th>Working Hours</th>
+          <th>Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for att in records %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="avatar avatar-sm">{{ att.employee.user.first_name|first|upper }}{{ att.employee.user.last_name|first|upper }}</div>
+              <div>
+                <div class="fw-600 fs-13">{{ att.employee.user.full_name }}</div>
+                <div class="text-muted fs-12">{{ att.employee.user.get_role_display }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="fw-600 fs-13">{{ att.date|date:"M j, Y" }}</td>
+          <td><span class="status-badge {{ att.status|lower }}">{{ att.get_status_display }}</span></td>
+          <td>{% if att.check_in_time %}<span class="fw-600 text-success">{{ att.check_in_time|time:"H:i" }}</span>{% else %}—{% endif %}</td>
+          <td>{% if att.check_out_time %}{{ att.check_out_time|time:"H:i" }}{% elif att.check_in_time %}<span class="text-success">Active</span>{% else %}—{% endif %}</td>
+          <td class="fw-600">{{ att.working_hours_display }}</td>
+          <td class="text-muted fs-12">{{ att.check_in_location|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7"><div class="table-empty"><i class="bi bi-calendar-x"></i><p>No attendance records for this period.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if records.paginator.num_pages > 1 %}
+  <div class="crm-pagination">
+    <span class="pagination-info">{{ records.start_index }}–{{ records.end_index }} of {{ records.paginator.count }}</span>
+    <nav><ul class="pagination pagination-sm mb-0">
+      {% if records.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ records.previous_page_number }}&{{ request.GET.urlencode }}">‹</a></li>{% endif %}
+      {% if records.has_next %}<li class="page-item"><a class="page-link" href="?page={{ records.next_page_number }}&{{ request.GET.urlencode }}">›</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

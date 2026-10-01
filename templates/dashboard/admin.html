@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% load crm_tags humanize %}
+{% block title %}Admin Dashboard — Novem Controls CRM{% endblock %}
+
+{% block breadcrumb %}
+<i class="bi bi-speedometer2 me-1 text-muted"></i>
+<span class="breadcrumb-item">Admin Dashboard</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Admin Dashboard</h1>
+    <p class="page-subtitle">Welcome back, {{ user.first_name }}. Here's what's happening today.</p>
+  </div>
+  <div class="page-actions">
+    <!-- Date filter -->
+    <div class="date-filter-tabs">
+      <a href="?range=today" class="btn {% if date_range == 'today' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Today</a>
+      <a href="?range=yesterday" class="btn {% if date_range == 'yesterday' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Yesterday</a>
+      <a href="?range=week" class="btn {% if date_range == 'week' %}btn-primary{% else %}btn-outline-secondary{% endif %}">This Week</a>
+      <a href="?range=month" class="btn {% if date_range == 'month' %}btn-primary{% else %}btn-outline-secondary{% endif %}">This Month</a>
+      <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#customDateModal">
+        <i class="bi bi-calendar3"></i> Custom
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 1: Employee Stats ──────────────────────────────────── -->
+<div class="dashboard-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom:20px;">
+  <a href="{% url 'accounts:employee_list' %}" class="stat-card stat-card-link">
+    <div class="stat-icon primary"><i class="bi bi-people-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ total_employees }}</div>
+      <div class="stat-label">Total Employees</div>
+    </div>
+  </a>
+  <a href="{% url 'accounts:employee_list' %}?role=CALLING" class="stat-card stat-card-link">
+    <div class="stat-icon info"><i class="bi bi-telephone-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ calling_count }}</div>
+      <div class="stat-label">HR Department</div>
+    </div>
+  </a>
+  <a href="{% url 'accounts:employee_list' %}?role=MARKETING" class="stat-card stat-card-link">
+    <div class="stat-icon success"><i class="bi bi-megaphone-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ marketing_count }}</div>
+      <div class="stat-label">Marketing Team</div>
+    </div>
+  </a>
+  <a href="{% url 'accounts:employee_list' %}?role=DEVELOPER" class="stat-card stat-card-link">
+    <div class="stat-icon warning"><i class="bi bi-code-slash"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ developer_count }}</div>
+      <div class="stat-label">Developers</div>
+    </div>
+  </a>
+</div>
+
+<!-- ── Row 2: Lead & Call Stats ──────────────────────────────── -->
+<div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr); margin-bottom:20px;">
+  <a href="{% url 'leads:list' %}" class="stat-card stat-card-link">
+    <div class="stat-icon secondary"><i class="bi bi-person-lines-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ total_leads|intcomma }}</div>
+      <div class="stat-label">Total Leads</div>
+    </div>
+  </a>
+  <a href="{% url 'reports:calling' %}?date_from={{ start|date:'Y-m-d' }}&amp;date_to={{ end|date:'Y-m-d' }}" class="stat-card stat-card-link">
+    <div class="stat-icon primary"><i class="bi bi-telephone-outbound-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ calls_today }}</div>
+      <div class="stat-label">Calls in Selected Range</div>
+    </div>
+  </a>
+  <a href="{% url 'leads:list' %}?status=INTERESTED" class="stat-card stat-card-link">
+    <div class="stat-icon success"><i class="bi bi-hand-thumbs-up-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ interested }}</div>
+      <div class="stat-label">Interested</div>
+    </div>
+  </a>
+  <a href="{% url 'calling:followups' %}?status=today" class="stat-card stat-card-link">
+    <div class="stat-icon warning"><i class="bi bi-calendar-event-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ followups_today }}</div>
+      <div class="stat-label">Follow-ups Today</div>
+    </div>
+  </a>
+  <a href="{% url 'calling:followups' %}?status=overdue" class="stat-card stat-card-link">
+    <div class="stat-icon danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ overdue_followups }}</div>
+      <div class="stat-label">Overdue Follow-ups</div>
+    </div>
+  </a>
+</div>
+
+<!-- ── Row 3: Conversion Rate + Charts + Top Callers ─────────── -->
+<div class="row g-4 mb-4">
+
+  <!-- Conversion Rate Card -->
+  <div class="col-12 col-md-3">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-graph-up-arrow"></i> Conversion</h5>
+      </div>
+      <div class="crm-card-body text-center py-4">
+        <div style="font-size:56px; font-weight:800; color: var(--primary); line-height:1;">
+          {{ conversion_rate }}<span style="font-size:28px;">%</span>
+        </div>
+        <p class="text-muted mt-2 mb-3">Conversion Rate</p>
+        <div class="progress" style="height:8px;">
+          <div class="progress-bar bg-primary" style="width:{{ conversion_rate }}%"></div>
+        </div>
+        <div class="row mt-3 text-center">
+          <div class="col-6">
+            <div class="fw-700 text-success">{{ interested }}</div>
+            <div class="fs-12 text-muted">Interested</div>
+          </div>
+          <div class="col-6">
+            <div class="fw-700 text-danger">{{ not_interested }}</div>
+            <div class="fs-12 text-muted">Not Interested</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calls per day chart -->
+  <div class="col-12 col-md-6">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-bar-chart-fill"></i> Calls — Last 7 Days</h5>
+        <a href="{% url 'reports:calling' %}" class="btn btn-sm btn-outline-primary">Full Report</a>
+      </div>
+      <div class="crm-card-body">
+        <div class="chart-container" style="height:200px;">
+          <canvas id="callsChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Callers -->
+  <div class="col-12 col-md-3">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-trophy-fill"></i> Top Callers</h5>
+      </div>
+      <div class="crm-card-body p-0">
+        {% for caller in top_callers %}
+        <div class="d-flex align-items-center px-3 py-2 border-bottom">
+          <div class="avatar avatar-sm me-2">
+            {{ caller.employee__first_name|first|upper }}{{ caller.employee__last_name|first|upper }}
+          </div>
+          <div class="flex-grow-1 min-w-0">
+            <div class="fw-600 fs-13 text-truncate">{{ caller.employee__first_name }} {{ caller.employee__last_name }}</div>
+          </div>
+          <span class="badge bg-primary">{{ caller.call_count }}</span>
+        </div>
+        {% empty %}
+        <div class="text-center py-4 text-muted fs-13">No calls in this period</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Row 4: Today's Attendance + Recent Activity ────────────── -->
+<div class="row g-4 mb-4">
+  <div class="col-12 col-lg-7">
+    <div class="crm-table-wrapper">
+      <div class="crm-table-header">
+        <span class="crm-table-title"><i class="bi bi-clock-history text-primary"></i> Today's Attendance</span>
+        <a href="{% url 'attendance:report' %}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="crm-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Check In</th>
+              <th>Check Out</th>
+              <th>Hours</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for att in today_attendance %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="avatar avatar-sm">{{ att.employee.user.first_name|first|upper }}{{ att.employee.user.last_name|first|upper }}</div>
+                  <div>
+                    <div class="fw-600 fs-13">{{ att.employee.user.full_name }}</div>
+                    <div class="text-muted fs-12">{{ att.employee.user.get_role_display }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>{% if att.check_in_time %}{{ att.check_in_time|time:"H:i" }}{% else %}—{% endif %}</td>
+              <td>{% if att.check_out_time %}{{ att.check_out_time|time:"H:i" }}{% else %}<span class="text-success fw-600">Active</span>{% endif %}</td>
+              <td>{{ att.working_hours_display }}</td>
+              <td><span class="status-badge {{ att.status|lower }}">{{ att.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="table-empty"><i class="bi bi-calendar-x"></i><p>No attendance records today</p></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="crm-card h-100">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-activity"></i> Recent Activity</h5>
+        <a href="{% url 'accounts:activity_log' %}" class="btn btn-sm btn-outline-secondary">All Logs</a>
+      </div>
+      <div class="crm-card-body p-0">
+        <div style="max-height:320px; overflow-y:auto;">
+          {% for log in recent_activity %}
+          <div class="d-flex align-items-start gap-2 px-3 py-2 border-bottom">
+            <div class="avatar avatar-sm mt-1"
+                 style="background:linear-gradient(135deg,#4f46e5,#6366f1); font-size:10px;">
+              {% if log.user %}{{ log.user.first_name|first|upper }}{{ log.user.last_name|first|upper }}{% else %}?{% endif %}
+            </div>
+            <div class="flex-grow-1 min-w-0">
+              <div class="fs-13 fw-500">
+                {% if log.user %}<span class="fw-600">{{ log.user.first_name }}</span>{% endif %}
+                {{ log.description|truncatechars:60 }}
+              </div>
+              <div class="text-muted fs-12">{{ log.created_at|timesince }} ago</div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-center py-4 text-muted fs-13">No recent activity</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Quick Actions ──────────────────────────────────────────── -->
+<div class="crm-card mb-4">
+  <div class="crm-card-header">
+    <h5 class="crm-card-title"><i class="bi bi-lightning-fill"></i> Quick Actions</h5>
+  </div>
+  <div class="crm-card-body">
+    <div class="d-flex flex-wrap gap-3">
+      <a href="{% url 'leads:excel_upload' %}" class="btn btn-outline-primary">
+        <i class="bi bi-file-earmark-spreadsheet"></i> Import Leads
+      </a>
+      <a href="{% url 'leads:create' %}" class="btn btn-outline-primary">
+        <i class="bi bi-person-plus"></i> Add Lead
+      </a>
+      <a href="{% url 'accounts:employee_create' %}" class="btn btn-outline-success">
+        <i class="bi bi-person-badge"></i> Add Employee
+      </a>
+      <a href="{% url 'developers:task_create' %}" class="btn btn-outline-warning">
+        <i class="bi bi-plus-circle"></i> Create Task
+      </a>
+      <a href="{% url 'calling:monitor' %}" class="btn btn-outline-info">
+        <i class="bi bi-eye"></i> Monitor Calls
+      </a>
+      <a href="{% url 'reports:calling' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-bar-chart"></i> Call Report
+      </a>
+      <a href="{% url 'locations:admin_map' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-map"></i> Location Map
+      </a>
+      <a href="{% url 'notifications:announcement' %}" class="btn btn-outline-danger">
+        <i class="bi bi-broadcast"></i> Send Announcement
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Date Modal -->
+<div class="modal fade" id="customDateModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Custom Date Range</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="get">
+        <div class="modal-body">
+          <input type="hidden" name="range" value="custom" />
+          <div class="mb-3">
+            <label class="form-label">From</label>
+            <input type="date" name="start" class="form-control" value="{{ start }}" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">To</label>
+            <input type="date" name="end" class="form-control" value="{{ end }}" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Apply</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  const ctx = document.getElementById('callsChart');
+  if (!ctx) return;
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ chart_labels|safe }},
+      datasets: [{
+        label: 'Calls',
+        data:   {{ chart_data|safe }},
+        backgroundColor: 'rgba(79, 70, 229, 0.15)',
+        borderColor:     '#4f46e5',
+        borderWidth: 2,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: '#f1f5f9' }, beginAtZero: true,
+             ticks: { precision: 0, font: { size: 11 } } }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

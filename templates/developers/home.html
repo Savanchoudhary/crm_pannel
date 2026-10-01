@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Developer Hub — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Developer Hub</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Developer Hub</h1>
+    <p class="page-subtitle">{{ today|date:"l, F j, Y" }}</p>
+  </div>
+  <div class="page-actions">
+    {% if user.is_admin %}
+    <a href="{% url 'developers:task_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> New Task
+    </a>
+    <a href="{% url 'developers:project_create' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-folder-plus"></i> New Project
+    </a>
+    {% endif %}
+    <a href="{% url 'developers:tasks' %}" class="btn btn-outline-primary">
+      <i class="bi bi-kanban"></i> All Tasks
+    </a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="dashboard-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:20px;">
+  <div class="stat-card">
+    <div class="stat-icon primary"><i class="bi bi-clipboard-data-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ total }}</div><div class="stat-label">Total Tasks</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon secondary"><i class="bi bi-hourglass-split"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ pending }}</div><div class="stat-label">Pending</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon info"><i class="bi bi-gear-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ in_progress }}</div><div class="stat-label">In Progress</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon success"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ completed }}</div><div class="stat-label">Completed</div></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <div class="stat-body"><div class="stat-value">{{ overdue }}</div><div class="stat-label">Overdue</div></div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Recent Tasks -->
+  <div class="col-12 col-lg-8">
+    <div class="crm-table-wrapper">
+      <div class="crm-table-header">
+        <span class="crm-table-title"><i class="bi bi-kanban text-primary"></i>
+          {% if user.is_admin %}All Tasks{% else %}My Tasks{% endif %}
+        </span>
+        <a href="{% url 'developers:tasks' %}" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="crm-table">
+          <thead>
+            <tr>
+              <th>Task</th>
+              {% if user.is_admin %}<th>Developer</th>{% endif %}
+              <th>Project</th>
+              <th>Priority</th>
+              <th>Due Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for task in recent_tasks %}
+            <tr>
+              <td>
+                <div class="fw-600 fs-13">{{ task.title|truncatechars:48 }}</div>
+                {% if task.notes %}<div class="text-muted fs-12">{{ task.notes|truncatechars:40 }}</div>{% endif %}
+              </td>
+              {% if user.is_admin %}
+              <td>
+                {% if task.developer %}
+                <div class="d-flex align-items-center gap-1">
+                  <div class="avatar avatar-sm">{{ task.developer.first_name|first|upper }}{{ task.developer.last_name|first|upper }}</div>
+                  <span class="fs-12">{{ task.developer.first_name }}</span>
+                </div>
+                {% else %}<span class="text-muted fs-12">Unassigned</span>{% endif %}
+              </td>
+              {% endif %}
+              <td class="text-muted fs-12">{{ task.project.name|default:"—" }}</td>
+              <td><span class="priority-badge {{ task.priority|lower }}">{{ task.get_priority_display }}</span></td>
+              <td>
+                {% if task.due_date %}
+                  <span class="fs-13 {% if task.is_overdue %}text-danger fw-700{% endif %}">
+                    {{ task.due_date }}{% if task.is_overdue %} ⚠{% endif %}
+                  </span>
+                {% else %}—{% endif %}
+              </td>
+              <td><span class="status-badge {{ task.status|lower }}">{{ task.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">
+              <div class="table-empty">
+                <i class="bi bi-kanban"></i>
+                <p>{% if user.is_admin %}No tasks yet. <a href="{% url 'developers:task_create' %}">Create one</a>{% else %}No tasks assigned yet.{% endif %}</p>
+              </div>
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Projects -->
+  <div class="col-12 col-lg-4">
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-folder2-open"></i> Projects</h5>
+        <a href="{% url 'developers:projects' %}" class="btn btn-sm btn-outline-secondary">All</a>
+      </div>
+      <div class="crm-card-body p-0">
+        {% for project in projects %}
+        <div class="px-3 py-3 border-bottom">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <div class="fw-600 fs-13">{{ project.name }}</div>
+              {% if project.end_date %}
+              <div class="text-muted fs-12">Due: {{ project.end_date|date:"M j, Y" }}</div>
+              {% endif %}
+            </div>
+            <span class="status-badge {{ project.status|lower }} fs-12">{{ project.get_status_display }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted fs-12">{{ project.completion_percentage }}% complete</div>
+          </div>
+          <div class="progress mt-1" style="height:5px;">
+            <div class="progress-bar bg-primary" style="width:{{ project.completion_percentage }}%"></div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-4 text-muted fs-13">
+          No projects yet.
+          {% if user.is_admin %}<br><a href="{% url 'developers:project_create' %}">Create one</a>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

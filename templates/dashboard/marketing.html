@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Marketing Dashboard — Novem Controls CRM{% endblock %}
+
+{% block breadcrumb %}
+<i class="bi bi-megaphone-fill me-1 text-muted"></i>
+<span class="breadcrumb-item">Marketing Dashboard</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Marketing Dashboard</h1>
+    <p class="page-subtitle">{{ today|date:"l, F j, Y" }}</p>
+  </div>
+  <div class="page-actions">
+    <a href="{% url 'marketing:activity_create' %}" class="btn btn-primary">
+      <i class="bi bi-plus-circle"></i> Log Activity
+    </a>
+  </div>
+</div>
+
+<!-- Attendance Card -->
+<div class="row g-4 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-clock-history"></i> Today's Attendance</h5>
+      </div>
+      <div class="crm-card-body text-center">
+        {% if today_attendance %}
+          {% if today_attendance.check_in_time %}
+          <div class="mb-2">
+            <span class="status-badge interested">Checked In</span>
+          </div>
+          <div class="fw-700" style="font-size:22px; color:var(--success);">
+            {{ today_attendance.check_in_time|time:"H:i" }}
+          </div>
+          <div class="text-muted fs-13 mt-1">Check-in time</div>
+          {% if today_attendance.check_out_time %}
+          <hr class="my-2" />
+          <div class="fw-700" style="font-size:18px;">{{ today_attendance.working_hours_display }}</div>
+          <div class="text-muted fs-12">Total working hours</div>
+          {% endif %}
+          {% endif %}
+        {% else %}
+          <div class="py-3">
+            <i class="bi bi-clock" style="font-size:36px; color:var(--text-muted);"></i>
+            <p class="text-muted mt-2 fs-13">Not checked in yet</p>
+            <p class="text-muted fs-12">Use the Check In button in the top bar</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-calendar3"></i> This Month</h5>
+      </div>
+      <div class="crm-card-body text-center">
+        <div class="stat-value" style="font-size:42px; color:var(--primary);">{{ this_month_attendance }}</div>
+        <div class="text-muted fs-13 mt-1">Days Present</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-geo-alt-fill"></i> Location Tracking</h5>
+      </div>
+      <div class="crm-card-body text-center">
+        <div id="trackingIndicator" class="tracking-indicator inactive mb-3">
+          <span class="dot"></span> Not Tracking
+        </div>
+        <button id="startTrackingBtn" class="btn btn-sm btn-success mb-2 w-100">
+          <i class="bi bi-geo-alt-fill"></i> Start Tracking
+        </button>
+        <button id="stopTrackingBtn" class="btn btn-sm btn-warning w-100" style="display:none">
+          <i class="bi bi-stop-circle"></i> Stop Tracking
+        </button>
+        {% if last_location %}
+        <div class="text-muted fs-12 mt-2">
+          Last: {{ last_location.timestamp|timesince }} ago
+        </div>
+        {% endif %}
+        <div class="text-muted fs-12 mt-2">
+          <i class="bi bi-shield-check text-success me-1"></i>
+          Tracking only when you start it
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12">
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-megaphone"></i> Quick Actions</h5>
+      </div>
+      <div class="crm-card-body">
+        <div class="d-flex flex-wrap gap-3">
+          <a href="{% url 'marketing:activity_create' %}" class="btn btn-outline-primary">
+            <i class="bi bi-plus-circle"></i> Log Field Activity
+          </a>
+          <a href="{% url 'marketing:activities' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-list-ul"></i> My Activities
+          </a>
+          <a href="{% url 'attendance:my_attendance' %}" class="btn btn-outline-info">
+            <i class="bi bi-clock-history"></i> Attendance History
+          </a>
+          <a href="{% url 'locations:my_history' %}" class="btn btn-outline-success">
+            <i class="bi bi-geo-alt"></i> Location History
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

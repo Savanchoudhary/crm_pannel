@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}{{ lead.name }} — Lead Detail{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'leads:list' %}" class="text-muted">Leads</a>
+<i class="bi bi-chevron-right mx-1 text-muted" style="font-size:11px;"></i>
+<span class="breadcrumb-item">{{ lead.name }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Lead Info -->
+  <div class="col-12 col-lg-4">
+    <div class="crm-card mb-4">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-person-fill"></i> Lead Information</h5>
+        {% if user.is_admin %}
+        <a href="{% url 'leads:list' %}" class="btn btn-sm btn-outline-secondary">Back</a>
+        {% endif %}
+      </div>
+      <div class="crm-card-body">
+        <div class="text-center mb-4">
+          <div class="avatar avatar-xl mx-auto mb-3" style="font-size:30px;">
+            {{ lead.name|first|upper }}
+          </div>
+          <h5 class="fw-700 mb-1">{{ lead.name }}</h5>
+          {% if lead.company %}<p class="text-muted fs-13 mb-1">{{ lead.company }}</p>{% endif %}
+          <span class="status-badge {{ lead.status|lower }}">{{ lead.get_status_display }}</span>
+        </div>
+
+        <!-- Quick Call -->
+        {% if not user.is_admin %}
+        <div class="mb-3" id="callSection">
+          <div id="preCallActions" class="pre-call-action">
+            <button class="btn btn-success w-100 mb-2"
+                    onclick="startCall({{ lead.pk }})" id="startCallBtn_{{ lead.pk }}">
+              <i class="bi bi-telephone-fill"></i> Start Call
+            </button>
+          </div>
+          <!-- Active call panel (hidden initially) -->
+          <div id="callActivePanel" style="display:none;" class="call-active-card">
+            <div class="text-white fs-12 mb-1">Call in progress</div>
+            <div class="call-timer" id="callTimer">00m 00s</div>
+            <div class="mt-3">
+              <select id="callResult" class="form-select form-select-sm mb-2">
+                <option value="">-- Select Result --</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="INTERESTED">Interested ★</option>
+                <option value="NOT_INTERESTED">Not Interested</option>
+                <option value="NO_ANSWER">No Answer</option>
+                <option value="BUSY">Busy</option>
+                <option value="FOLLOW_UP">Follow-up Required</option>
+              </select>
+              <textarea id="callNotes" class="form-control form-control-sm mb-2" rows="2" placeholder="Notes..."></textarea>
+              <div id="followUpSection" style="display:none;">
+                <input type="date" id="callFollowUpDate" class="form-control form-control-sm mb-2" />
+              </div>
+              <button class="btn btn-warning w-100 btn-sm fw-600" id="endCallBtn"
+                      onclick="endCall(window._activeCallId)">
+                End Call & Save
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Contact Info -->
+        <div class="info-list">
+          <div class="info-row">
+            <i class="bi bi-telephone-fill text-primary"></i>
+            <div>
+              <div class="info-label">Phone</div>
+              <a href="tel:{{ lead.phone }}" class="fw-600">{{ lead.phone }}</a>
+            </div>
+          </div>
+          {% if lead.alternate_phone %}
+          <div class="info-row">
+            <i class="bi bi-telephone text-muted"></i>
+            <div>
+              <div class="info-label">Alternate</div>
+              <a href="tel:{{ lead.alternate_phone }}">{{ lead.alternate_phone }}</a>
+            </div>
+          </div>
+          {% endif %}
+          {% if lead.email %}
+          <div class="info-row">
+            <i class="bi bi-envelope-fill text-info"></i>
+            <div>
+              <div class="info-label">Email</div>
+              <a href="mailto:{{ lead.email }}" class="text-truncate d-block" style="max-width:180px;">{{ lead.email }}</a>
+            </div>
+          </div>
+          {% endif %}
+          {% if lead.location %}
+          <div class="info-row">
+            <i class="bi bi-geo-alt-fill text-success"></i>
+            <div>
+              <div class="info-label">Location</div>
+              <span>{{ lead.location }}</span>
+            </div>
+          </div>
+          {% endif %}
+          {% if lead.company %}
+          <div class="info-row">
+            <i class="bi bi-building text-secondary"></i>
+            <div>
+              <div class="info-label">Company</div>
+              <span>{{ lead.company }}</span>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        <hr />
+        <!-- Status Update -->
+        <div class="mb-3">
+          <label class="form-label fs-12">Update Status</label>
+          <select class="form-select form-select-sm" onchange="updateLeadStatus({{ lead.pk }}, this.value)">
+            {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if lead.status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lead Meta -->
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-info-circle-fill"></i> Details</h5>
+      </div>
+      <div class="crm-card-body">
+        <div class="row g-2 fs-13">
+          <div class="col-6"><div class="text-muted">Source</div><div class="fw-600">{{ lead.get_source_display }}</div></div>
+          <div class="col-6"><div class="text-muted">Assigned To</div><div class="fw-600">{{ lead.assigned_to.full_name|default:"Unassigned" }}</div></div>
+          {% if lead.product_interest %}
+          <div class="col-12"><div class="text-muted">Product Interest</div><div class="fw-600">{{ lead.product_interest }}</div></div>
+          {% endif %}
+          {% if lead.budget %}
+          <div class="col-6"><div class="text-muted">Budget</div><div class="fw-600">{{ lead.budget }}</div></div>
+          {% endif %}
+          <div class="col-12"><div class="text-muted">Created</div><div class="fw-600">{{ lead.created_at|date:"M j, Y H:i" }}</div></div>
+        </div>
+        {% if lead.remarks %}
+        <hr />
+        <div class="text-muted fs-12 mb-1">Remarks</div>
+        <p class="fs-13">{{ lead.remarks }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column: Calls, Notes, Follow-ups -->
+  <div class="col-12 col-lg-8">
+    <!-- Call History -->
+    <div class="crm-card mb-4">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-telephone-fill"></i> Call History</h5>
+        <span class="badge bg-primary">{{ calls.count }}</span>
+      </div>
+      <div class="crm-card-body p-0">
+        {% if calls %}
+        <div class="table-responsive">
+          <table class="crm-table">
+            <thead>
+              <tr><th>Date</th><th>By</th><th>Duration</th><th>Result</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+              {% for call in calls %}
+              <tr>
+                <td class="fs-12">{{ call.started_at|date:"M j, Y H:i" }}</td>
+                <td class="fs-13">{{ call.employee.first_name|default:"—" }}</td>
+                <td class="fw-600">{{ call.duration_display }}</td>
+                <td><span class="status-badge {{ call.result|lower }}">{{ call.get_result_display }}</span></td>
+                <td class="text-muted fs-12">{{ call.notes|truncatechars:50|default:"—" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="table-empty"><i class="bi bi-telephone-x"></i><p>No calls yet</p></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="crm-card mb-4">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-chat-left-text-fill"></i> Notes</h5>
+      </div>
+      <div class="crm-card-body">
+        <!-- Add note -->
+        <div class="mb-3 d-flex gap-2">
+          <textarea id="noteContent" class="form-control form-control-sm flex-grow-1" rows="2" placeholder="Add a note..."></textarea>
+          <button class="btn btn-primary btn-sm align-self-end" onclick="submitNote()">
+            <i class="bi bi-send"></i>
+          </button>
+        </div>
+        <!-- Notes timeline -->
+        <div id="notesList">
+          {% for note in notes %}
+          <div class="d-flex gap-2 mb-3 note-item">
+            <div class="avatar avatar-sm flex-shrink-0 mt-1">
+              {{ note.created_by.first_name|first|upper }}{{ note.created_by.last_name|first|upper }}
+            </div>
+            <div class="bg-light rounded p-2 flex-grow-1">
+              <div class="d-flex justify-content-between mb-1">
+                <span class="fw-600 fs-13">{{ note.created_by.full_name }}</span>
+                <span class="text-muted fs-12">{{ note.created_at|timesince }} ago</span>
+              </div>
+              <p class="fs-13 mb-0">{{ note.content }}</p>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-muted fs-13 text-center py-2">No notes yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Follow-ups -->
+    <div class="crm-card">
+      <div class="crm-card-header">
+        <h5 class="crm-card-title"><i class="bi bi-calendar-check-fill"></i> Follow-ups</h5>
+      </div>
+      <div class="crm-card-body p-0">
+        {% if followups %}
+        <div class="table-responsive">
+          <table class="crm-table">
+            <thead>
+              <tr><th>Date</th><th>Assigned To</th><th>Notes</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {% for fu in followups %}
+              <tr id="followup_{{ fu.id }}">
+                <td class="fw-600 fs-13 {% if fu.is_overdue %}text-danger{% endif %}">
+                  {{ fu.follow_up_date }}{% if fu.is_overdue %} ⚠{% endif %}
+                </td>
+                <td class="fs-13">{{ fu.assigned_to.first_name|default:"—" }}</td>
+                <td class="text-muted fs-12">{{ fu.notes|truncatechars:40|default:"—" }}</td>
+                <td>
+                  {% if fu.is_completed %}
+                  <span class="status-badge completed">Completed</span>
+                  {% elif fu.is_overdue %}
+                  <span class="status-badge not_interested">Overdue</span>
+                  {% else %}
+                  <span class="status-badge follow_up">Pending</span>
+                  <button class="btn btn-xs btn-success ms-1" onclick="completeFollowUp({{ fu.id }}, '')">Done</button>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="table-empty"><i class="bi bi-calendar-x"></i><p>No follow-ups</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Note submission
+function submitNote() {
+  const content = document.getElementById('noteContent').value.trim();
+  if (!content) return;
+  csrfPost('{% url "leads:add_note" lead.pk %}', { content }, data => {
+    if (data.id) {
+      const list = document.getElementById('notesList');
+      const html = `<div class="d-flex gap-2 mb-3">
+        <div class="avatar avatar-sm flex-shrink-0 mt-1">${data.created_by.split(' ').map(w=>w[0]).join('').toUpperCase()}</div>
+        <div class="bg-light rounded p-2 flex-grow-1">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="fw-600 fs-13">${data.created_by}</span>
+            <span class="text-muted fs-12">just now</span>
+          </div>
+          <p class="fs-13 mb-0">${data.content}</p>
+        </div>
+      </div>`;
+      list.insertAdjacentHTML('afterbegin', html);
+      document.getElementById('noteContent').value = '';
+      showToast('Note added.', 'success');
+    } else {
+      showToast(data.error || 'Failed to add note.', 'error');
+    }
+  });
+}
+
+// Show follow-up date when FOLLOW_UP selected
+const resultSelect = document.getElementById('callResult');
+if (resultSelect) resultSelect.addEventListener('change', function() {
+  const fus = document.getElementById('followUpSection');
+  if (fus) fus.style.display = this.value === 'FOLLOW_UP' ? '' : 'none';
+});
+
+// Track active call id from startCall response
+const origStartCall = window.startCall;
+// Override to capture call_id
+window._activeCallId = null;
+window.startCall = function(leadPk) {
+  const btn = document.getElementById(`startCallBtn_${leadPk}`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>'; }
+  csrfPost(`/calling/start/${leadPk}/`, {}, data => {
+    if (data.call_id) {
+      window._activeCallId = data.call_id;
+      document.getElementById('callActivePanel').style.display = '';
+      document.getElementById('preCallActions').style.display = 'none';
+      startCallTimer(data.call_id, data.started_at);
+      showToast('Call started.', 'info');
+    } else {
+      showToast(data.error || 'Could not start call.', 'error');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-telephone-fill"></i> Start Call'; }
+    }
+  });
+};
+</script>
+<style>
+.info-list { display:flex; flex-direction:column; gap:10px; }
+.info-row  { display:flex; align-items:flex-start; gap:10px; }
+.info-row i { font-size:16px; margin-top:2px; }
+.info-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+</style>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Student Attendance — Novem Controls CRM{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Student Attendance</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Student Attendance</h1>
+    <p class="page-subtitle">Add students by technology and record daily attendance.</p>
+  </div>
+</div>
+
+<div class="crm-card mb-4">
+  <div class="crm-card-header">
+    <h5 class="crm-card-title"><i class="bi bi-person-plus-fill"></i> Add Student</h5>
+  </div>
+  <div class="crm-card-body">
+    <form method="post" class="row g-3 align-items-end">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_student">
+      <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+      <input type="hidden" name="technology" value="{{ technology_filter }}">
+      <div class="col-12 col-md-4">
+        <label class="form-label" for="studentName">Student Name</label>
+        <input id="studentName" name="name" class="form-control" required maxlength="150">
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="studentPhone">Phone</label>
+        <input id="studentPhone" name="phone" class="form-control" maxlength="20">
+      </div>
+      <div class="col-12 col-md-3">
+        <label class="form-label" for="studentTechnology">Technology</label>
+        <select id="studentTechnology" name="new_student_technology" class="form-select" required>
+          <option value="">Select technology</option>
+          {% for value, label in technology_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-2">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg"></i> Add</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <form method="get" class="d-flex gap-2 align-items-end flex-wrap">
+      <div>
+        <label class="form-label mb-1" for="attendanceDate">Date</label>
+        <input id="attendanceDate" type="date" name="date" class="form-control form-control-sm" value="{{ selected_date|date:'Y-m-d' }}">
+      </div>
+      <div>
+        <label class="form-label mb-1" for="technologyFilter">Technology</label>
+        <select id="technologyFilter" name="technology" class="form-select form-select-sm">
+          <option value="">All technologies</option>
+          {% for value, label in technology_choices %}
+          <option value="{{ value }}" {% if technology_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-funnel"></i> Show</button>
+    </form>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="mark_attendance">
+    <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+    <input type="hidden" name="technology" value="{{ technology_filter }}">
+    <div class="table-responsive">
+      <table class="crm-table">
+        <thead>
+          <tr><th>Student</th><th>Phone</th><th>Technology</th><th>Attendance</th></tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+          {% with record=attendance_by_student|dict_key:student.id %}
+          <tr>
+            <td class="fw-600">{{ student.name }}</td>
+            <td>{{ student.phone|default:'—' }}</td>
+            <td>{{ student.get_technology_display }}</td>
+            <td>
+              <select name="status_{{ student.id }}" class="form-select form-select-sm" aria-label="Attendance for {{ student.name }}">
+                <option value="">Not marked</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if record.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </td>
+          </tr>
+          {% endwith %}
+          {% empty %}
+          <tr><td colspan="4" class="table-empty">No students found. Add a student above.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if students %}
+    <div class="p-3 d-flex justify-content-end">
+      <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle"></i> Save Attendance</button>
+    </div>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

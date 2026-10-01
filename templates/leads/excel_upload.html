@@ -1,0 +1,367 @@
+
+{% extends "base.html" %}
+
+{% block title %}Import Leads — Excel Upload{% endblock %}
+
+{% block breadcrumb %}
+<a href="{% url 'leads:list' %}" class="text-muted">Leads</a>
+›
+<span class="breadcrumb-item">Import Excel</span>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div class="page-header-left">
+        <h1 class="page-title">Import Leads from Excel</h1>
+        <p class="page-subtitle">
+            Upload .xlsx, .xls or .csv files. Max 10,000 rows, 10 MB.
+        </p>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- Upload Section -->
+    <div class="col-12 col-lg-7">
+        <div class="crm-form-card">
+
+            <h5 class="fw-600 mb-4">
+                <i class="bi bi-file-earmark-spreadsheet text-success me-2"></i>
+                Upload File
+            </h5>
+
+            <form method="post"
+                  enctype="multipart/form-data"
+                  id="uploadForm">
+
+                {% csrf_token %}
+
+                <div class="upload-dropzone mb-4" id="dropZone">
+
+                    <i class="bi bi-cloud-upload upload-icon"></i>
+
+                    <p class="fw-600 mt-2 mb-1">
+                        Drag & drop your Excel file here
+                    </p>
+
+                    <p class="text-muted fs-13 mb-3">
+                        or click to browse
+                    </p>
+
+                    <input
+                        type="file"
+                        name="excel_file"
+                        id="fileInput"
+                        accept=".xlsx,.xls,.csv"
+                        hidden
+                    >
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-primary"
+                        id="chooseFileBtn">
+                        <i class="bi bi-folder2-open"></i>
+                        Choose File
+                    </button>
+
+                    <div
+                        id="fileNameDisplay"
+                        class="mt-3 text-success fw-600 fs-13"
+                        style="display:none;">
+                    </div>
+
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary w-100 py-2">
+
+                    <i class="bi bi-arrow-up-circle"></i>
+                    Upload & Preview
+
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+
+
+    <!-- Right Section -->
+    <div class="col-12 col-lg-5">
+
+        <div class="crm-card mb-4">
+
+            <div class="crm-card-header">
+                <h5 class="crm-card-title">
+                    <i class="bi bi-info-circle-fill"></i>
+                    Expected Columns
+                </h5>
+            </div>
+
+            <div class="crm-card-body">
+
+                <p class="text-muted fs-13 mb-3">
+                    Your Excel file should have these columns:
+                </p>
+
+                <div class="row g-2">
+
+                    {% for col in expected_columns %}
+
+                    <div class="col-6">
+
+                        <div class="d-flex align-items-center gap-2 fs-13">
+
+                            <i class="bi bi-check-circle-fill text-success fs-12"></i>
+
+                            {{ col }}
+
+                        </div>
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+                <div class="alert alert-warning mt-3 py-2 fs-12">
+
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+
+                    <strong>Required:</strong>
+                    Name and Phone Number.
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Recent Imports -->
+        {% if recent_imports %}
+
+        <div class="crm-card">
+
+            <div class="crm-card-header">
+
+                <h5 class="crm-card-title">
+                    <i class="bi bi-clock-history"></i>
+                    Recent Imports
+                </h5>
+
+                <a
+                    href="{% url 'leads:import_history' %}"
+                    class="btn btn-sm btn-outline-secondary">
+                    All
+                </a>
+
+            </div>
+
+            <div class="crm-card-body p-0">
+
+                {% for imp in recent_imports %}
+
+                <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">
+
+                    <i class="bi bi-file-earmark-spreadsheet text-success fs-5"></i>
+
+                    <div class="flex-grow-1 min-w-0">
+
+                        <div class="fw-600 fs-13 text-truncate">
+                            {{ imp.file_name }}
+                        </div>
+
+                        <div class="text-muted fs-12">
+                            {{ imp.imported_rows }} imported
+                            •
+                            {{ imp.created_at|date:"M j" }}
+                        </div>
+
+                    </div>
+
+                    <span
+                        class="badge
+                        {% if imp.status == 'COMPLETED' %}
+                            bg-success
+                        {% elif imp.status == 'FAILED' %}
+                            bg-danger
+                        {% else %}
+                            bg-secondary
+                        {% endif %}">
+
+                        {{ imp.status }}
+
+                    </span>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+<script>
+
+const fileInput = document.getElementById("fileInput");
+const dropZone = document.getElementById("dropZone");
+const fileNameDisplay = document.getElementById("fileNameDisplay");
+const chooseFileBtn = document.getElementById("chooseFileBtn");
+
+
+// Choose File button
+chooseFileBtn.addEventListener("click", function () {
+    fileInput.click();
+});
+
+
+// Click anywhere on drop zone
+dropZone.addEventListener("click", function (event) {
+
+    if (event.target !== chooseFileBtn) {
+        fileInput.click();
+    }
+
+});
+
+
+// File selected
+fileInput.addEventListener("change", function () {
+
+    if (this.files && this.files.length > 0) {
+
+        const file = this.files[0];
+
+        fileNameDisplay.textContent = "✓ " + file.name;
+        fileNameDisplay.style.display = "block";
+
+    }
+
+});
+
+
+// Drag over
+["dragover", "dragenter"].forEach(function (eventName) {
+
+    dropZone.addEventListener(eventName, function (event) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        dropZone.classList.add("drag-active");
+
+    });
+
+});
+
+
+// Drag leave
+["dragleave"].forEach(function (eventName) {
+
+    dropZone.addEventListener(eventName, function (event) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        dropZone.classList.remove("drag-active");
+
+    });
+
+});
+
+
+// Drop file
+dropZone.addEventListener("drop", function (event) {
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    dropZone.classList.remove("drag-active");
+
+    const files = event.dataTransfer.files;
+
+    if (files && files.length > 0) {
+
+        const file = files[0];
+
+        const allowedExtensions = [
+            ".xlsx",
+            ".xls",
+            ".csv"
+        ];
+
+        const fileName = file.name.toLowerCase();
+
+        const isValid = allowedExtensions.some(function (extension) {
+            return fileName.endsWith(extension);
+        });
+
+        if (!isValid) {
+
+            alert("Please upload only .xlsx, .xls or .csv files.");
+            return;
+
+        }
+
+        const dataTransfer = new DataTransfer();
+
+        dataTransfer.items.add(file);
+
+        fileInput.files = dataTransfer.files;
+
+        fileNameDisplay.textContent = "✓ " + file.name;
+        fileNameDisplay.style.display = "block";
+
+    }
+
+});
+
+</script>
+
+
+<style>
+
+.upload-dropzone {
+
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    padding: 40px 20px;
+    text-align: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.drag-active {
+
+    border-color: var(--primary);
+    background: rgba(0, 123, 255, 0.03);
+
+}
+
+.upload-icon {
+
+    font-size: 48px;
+    color: var(--text-muted);
+
+}
+
+</style>
+
+{% endblock %}
+```

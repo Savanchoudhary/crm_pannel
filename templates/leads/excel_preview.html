@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load crm_tags %}
+{% block title %}Excel Preview — Column Mapping{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">Excel Preview & Column Mapping</h1>
+    <p class="page-subtitle">File: <strong>{{ import_obj.file_name }}</strong> — {{ total_rows }} rows detected</p>
+  </div>
+</div>
+
+<form method="post" action="{% url 'leads:excel_import' %}">
+  {% csrf_token %}
+  <div class="row g-4">
+    <!-- Column Mapping -->
+    <div class="col-12 col-lg-5">
+      <div class="crm-card mb-4">
+        <div class="crm-card-header">
+          <h5 class="crm-card-title"><i class="bi bi-arrow-left-right"></i> Map Columns</h5>
+        </div>
+        <div class="crm-card-body">
+          <p class="text-muted fs-13 mb-3">Map your Excel columns to CRM fields. Name and Phone are required.</p>
+          {% for mapping in mapping_options %}
+          <div class="row g-2 align-items-center mb-2">
+            <div class="col-5">
+              <label class="form-label mb-0 fs-13 fw-600">
+                {{ mapping.field|title }}
+                {% if mapping.required %}<span class="text-danger">*</span>{% endif %}
+              </label>
+            </div>
+            <div class="col-7">
+              <select name="map_{{ mapping.field }}" class="form-select form-select-sm">
+                <option value="">-- Skip --</option>
+                {% for option in mapping.options %}
+                <option value="{{ option.column }}" {% if option.selected %}selected{% endif %}>{{ option.column }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Assign to employee -->
+      <div class="crm-card">
+        <div class="crm-card-header">
+          <h5 class="crm-card-title"><i class="bi bi-person-check-fill"></i> Assign Leads (Optional)</h5>
+        </div>
+        <div class="crm-card-body">
+          <label class="form-label fs-13">Assign all imported leads to:</label>
+          <select name="assigned_to" class="form-select">
+            <option value="">Leave unassigned</option>
+            {% for emp in calling_employees %}
+            <option value="{{ emp.id }}">{{ emp.full_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Preview -->
+    <div class="col-12 col-lg-7">
+      <div class="crm-card">
+        <div class="crm-card-header">
+          <h5 class="crm-card-title"><i class="bi bi-table"></i> Data Preview (first 10 rows)</h5>
+          <span class="badge bg-secondary">{{ total_rows }} total rows</span>
+        </div>
+        <div style="overflow-x:auto; max-height:400px; overflow-y:auto;">
+          <table class="crm-table" style="font-size:12px; min-width:600px;">
+            <thead>
+              <tr>
+                {% for col in columns %}
+                <th>{{ col }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in preview_rows %}
+              <tr>
+                {% for col in columns %}
+                <td>{{ row|dict_key:col|default:"" }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex gap-3">
+    <a href="{% url 'leads:excel_upload' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Start Over
+    </a>
+    <button type="submit" class="btn btn-success btn-lg px-5">
+      <i class="bi bi-check-circle"></i> Validate & Import
+    </button>
+  </div>
+</form>
+{% endblock %}

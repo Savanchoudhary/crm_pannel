@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}My Attendance{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-item">Attendance</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">My Attendance</h1>
+    <p class="page-subtitle">{{ today|date:"l, F j, Y" }}</p>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Today's Card -->
+  <div class="col-12 col-md-4">
+    <div class="crm-card">
+      <div class="crm-card-header"><h5 class="crm-card-title"><i class="bi bi-clock-fill"></i> Today</h5></div>
+      <div class="crm-card-body text-center py-3">
+        {% if today_record %}
+          {% if today_record.check_in_time %}
+          <div class="mb-2">
+            <div class="fw-700" style="font-size:32px; color:var(--success);">{{ today_record.check_in_time|time:"H:i" }}</div>
+            <div class="text-muted fs-13">Check-in time</div>
+          </div>
+          {% if today_record.check_out_time %}
+          <hr class="my-2" />
+          <div class="fw-700" style="font-size:24px;">{{ today_record.working_hours_display }}</div>
+          <div class="text-muted fs-13">Working hours</div>
+          {% else %}
+          <span class="status-badge interested">Currently Working</span>
+          {% endif %}
+          {% endif %}
+        {% else %}
+          <i class="bi bi-clock" style="font-size:40px; color:var(--text-muted); opacity:.4;"></i>
+          <p class="text-muted mt-2 fs-13">Not checked in yet today.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon primary"><i class="bi bi-calendar-check-fill"></i></div>
+      <div class="stat-body"><div class="stat-value">{{ present_days }}</div><div class="stat-label">Days This Month</div></div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="stat-card">
+      <div class="stat-icon info"><i class="bi bi-clock-history"></i></div>
+      <div class="stat-body"><div class="stat-value">{{ total_hours }}h</div><div class="stat-label">Hours This Month</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Attendance History -->
+<div class="crm-table-wrapper">
+  <div class="crm-table-header">
+    <span class="crm-table-title"><i class="bi bi-clock-history text-primary"></i> Attendance History</span>
+  </div>
+  <div class="table-responsive">
+    <table class="crm-table">
+      <thead>
+        <tr><th>Date</th><th>Status</th><th>Check In</th><th>Check Out</th><th>Working Hours</th></tr>
+      </thead>
+      <tbody>
+        {% for att in records %}
+        <tr>
+          <td class="fw-600 fs-13">{{ att.date|date:"M j, Y" }}</td>
+          <td><span class="status-badge {{ att.status|lower }}">{{ att.get_status_display }}</span></td>
+          <td>{% if att.check_in_time %}{{ att.check_in_time|time:"H:i" }}{% else %}—{% endif %}</td>
+          <td>{% if att.check_out_time %}{{ att.check_out_time|time:"H:i" }}{% else %}<span class="text-success">Active</span>{% endif %}</td>
+          <td class="fw-600">{{ att.working_hours_display }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5"><div class="table-empty"><i class="bi bi-calendar-x"></i><p>No attendance records yet.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
