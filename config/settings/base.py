@@ -3,6 +3,7 @@ Base settings for Novem Controls CRM.
 All environments inherit from this.
 """
 import os
+import dj_database_url
 from pathlib import Path
 from decouple import config, Csv
 
@@ -99,19 +100,30 @@ ASGI_APPLICATION = 'config.asgi.application'
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='novem_crm_db'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
-        'OPTIONS': {
-            'connect_timeout': 10,
-        },
+DATABASE_URL = config('DATABASE_URL', default='')
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=0,
+            ssl_require=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='novem_crm_db'),
+            'USER': config('DB_USER', default='postgres'),
+            'PASSWORD': config('DB_PASSWORD', default=''),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+            'OPTIONS': {
+                'connect_timeout': 10,
+            },
+        }
+    }
 
 # ---------------------------------------------------------------------------
 # Custom User Model
