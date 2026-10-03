@@ -16,8 +16,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # Security
 # ---------------------------------------------------------------------------
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = [
+    "crm-pannel-7i5v.vercel.app",
+    ".vercel.app",
+    "localhost",
+    "127.0.0.1",
+]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://crm-pannel-7i5v.vercel.app",
+]
 # ---------------------------------------------------------------------------
 # Application definition
 # ---------------------------------------------------------------------------
@@ -104,12 +112,12 @@ DATABASE_URL = config('DATABASE_URL', default='')
 
 if DATABASE_URL:
     DATABASES = {
-        'default': dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=0,
-            ssl_require=True,
-        )
-    }
+    'default': dj_database_url.parse(
+        config('DATABASE_URL'),
+        conn_max_age=600,
+        ssl_require=True,
+    )
+}
 else:
     DATABASES = {
         'default': {
