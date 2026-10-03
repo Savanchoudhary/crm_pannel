@@ -7,8 +7,18 @@ import dj_database_url
 DEBUG = False
 
 # Security settings
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=Csv())
-CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=Csv())
+# Security settings
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='.vercel.app,localhost,127.0.0.1',
+    cast=Csv()
+)
+
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='https://crm-pannel-7i5v.vercel.app',
+    cast=Csv()
+)
 
 # Render and other managed hosts provide the connection string directly.
 if config('DATABASE_URL', default=''):
