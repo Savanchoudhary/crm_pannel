@@ -346,16 +346,15 @@ def excel_upload(request):
             for field in COLUMN_ALIASES.keys()
         ]
 
-        # Save file temporarily via ExcelImport record
-        from django.core.files.base import ContentFile
+        # Store the file in the database so it survives serverless requests.
         uploaded_file.seek(0)
         import_obj = ExcelImport.objects.create(
             uploaded_by=request.user,
             file_name=uploaded_file.name,
+            file_content=uploaded_file.read(),
             total_rows=len(df),
             status=ExcelImport.ImportStatus.PENDING,
         )
-        import_obj.file.save(uploaded_file.name, ContentFile(uploaded_file.read()))
 
         # Store preview in session
         preview_rows = df.head(10).to_dict('records')
@@ -412,9 +411,16 @@ def excel_import_confirm(request):
         except User.DoesNotExist:
             pass
 
-    # Re-read the file
-    import_obj.file.seek(0)
-    df, error = read_excel_file(import_obj.file)
+    # Read from the database on serverless hosts where local media is not persistent.
+    if import_obj.file_content is not None:
+        from io import BytesIO
+        uploaded_file = BytesIO(import_obj.file_content)
+        uploaded_file.name = import_obj.file_name
+    else:
+        import_obj.file.seek(0)
+        uploaded_file = import_obj.file
+
+    df, error = read_excel_file(uploaded_file)
     if error:
         messages.error(request, f'Error reading file: {error}')
         return redirect('leads:excel_upload')

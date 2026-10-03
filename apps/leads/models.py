@@ -144,6 +144,7 @@ class ExcelImport(models.Model):
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     file_name = models.CharField(max_length=255)
     file = models.FileField(upload_to='uploads/excel/')
+    file_content = models.BinaryField(null=True, blank=True, editable=False)
     status = models.CharField(
         max_length=20, choices=ImportStatus.choices, default=ImportStatus.PENDING
     )
