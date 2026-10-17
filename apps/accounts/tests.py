@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from .templatetags.crm_tags import role_badge
 from .models import User
 
 
@@ -60,3 +61,35 @@ class AdminDashboardActionsTests(TestCase):
             with self.subTest(destination=destination):
                 response = self.client.get(reverse(destination))
                 self.assertEqual(response.status_code, 200)
+
+
+class EmployeeRoleBadgeTests(TestCase):
+    def test_employee_panel_renders_role_badge_as_html(self):
+        admin = User.objects.create_superuser(
+            email='role-badge-admin@example.com',
+            password='test-password',
+            username='role-badge-admin',
+        )
+        employee = User.objects.create_user(
+            email='role-badge-employee@example.com',
+            password='test-password',
+            username='role-badge-employee',
+            first_name='Test',
+            role='ADMIN',
+        )
+        self.client.force_login(admin)
+
+        response = self.client.get(reverse('accounts:employee_list'))
+
+        self.assertContains(
+            response, '<span class="badge bg-danger">Admin</span>', html=True
+        )
+
+    def test_role_badge_escapes_unexpected_role_labels(self):
+        badge = role_badge('<script>alert(1)</script>')
+
+        self.assertEqual(
+            str(badge),
+            '<span class="badge bg-secondary">'
+            '&lt;script&gt;alert(1)&lt;/script&gt;</span>',
+        )

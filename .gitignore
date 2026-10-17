@@ -63,3 +63,6 @@ htmlcov/
 
 # Migrations (keep these in version control)
 # !*/migrations/*.py
+
+.vercel
+.env*

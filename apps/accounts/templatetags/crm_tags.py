@@ -2,6 +2,7 @@
 Custom template tags and filters for the CRM.
 """
 from django import template
+from django.utils.html import format_html
 from django.utils import timezone
 from datetime import timedelta
 
@@ -25,7 +26,7 @@ def role_badge(role):
     }
     color = colors.get(role, 'secondary')
     label = labels.get(role, role)
-    return f'<span class="badge bg-{color}">{label}</span>'
+    return format_html('<span class="badge bg-{}">{}</span>', color, label)
 
 
 @register.filter

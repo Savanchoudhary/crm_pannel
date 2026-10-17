@@ -196,6 +196,17 @@
 
                     </span>
 
+                    <form method="post"
+                          action="{% url 'leads:delete_imported_leads' imp.pk %}"
+                          class="d-inline-flex"
+                          onsubmit="return confirm('Delete all {{ imp.current_lead_count }} leads imported from {{ imp.file_name|escapejs }}? This cannot be undone.');">
+                        {% csrf_token %}
+                        <input type="hidden" name="return_to" value="upload">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </form>
+
                 </div>
 
                 {% endfor %}

@@ -6,7 +6,7 @@ from django.test import SimpleTestCase, TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from apps.accounts.models import Role, User
+from apps.accounts.models import ActivityLog, Role, User
 from .excel_utils import detect_column_mapping, read_excel_file
 from .models import ExcelImport, Lead
 
@@ -50,6 +50,152 @@ class FlexibleExcelImportTests(SimpleTestCase):
 
 
 class ExcelImportServerlessTests(TestCase):
+    def test_admin_can_delete_one_import_batch_without_deleting_other_leads(self):
+        admin = User.objects.create_user(
+            email='admin@example.com', password='password', role=Role.ADMIN,
+        )
+        import_obj = ExcelImport.objects.create(
+            uploaded_by=admin,
+            file_name='leads.xlsx',
+            total_rows=2,
+            imported_rows=2,
+            status=ExcelImport.ImportStatus.COMPLETED,
+        )
+        empty_import = ExcelImport.objects.create(
+            uploaded_by=admin,
+            file_name='empty.xlsx',
+            imported_rows=0,
+            status=ExcelImport.ImportStatus.COMPLETED,
+        )
+        imported_lead = Lead.objects.create(
+            name='Imported Lead',
+            phone='555-123-4567',
+            source='EXCEL',
+            created_by=admin,
+            excel_import=import_obj,
+        )
+        other_lead = Lead.objects.create(
+            name='Manual Lead',
+            phone='555-765-4321',
+            created_by=admin,
+        )
+        self.client.force_login(admin)
+
+        history_response = self.client.get(reverse('leads:import_history'))
+        self.assertContains(history_response, 'Delete Leads')
+        self.assertContains(history_response, 'Current Leads')
+        upload_response = self.client.get(reverse('leads:excel_upload'))
+        self.assertEqual(len(upload_response.context['recent_imports']), 2)
+        self.assertContains(upload_response, '<i class="bi bi-trash"></i>', count=2)
+        self.assertContains(upload_response, 'name="return_to" value="upload"', count=2)
+
+        response = self.client.post(
+            reverse('leads:delete_imported_leads', args=[import_obj.pk]),
+            {'return_to': 'upload'},
+        )
+
+        self.assertRedirects(response, reverse('leads:excel_upload'))
+        self.assertFalse(Lead.objects.filter(pk=imported_lead.pk).exists())
+        self.assertTrue(Lead.objects.filter(pk=other_lead.pk).exists())
+        self.assertFalse(ExcelImport.objects.filter(pk=import_obj.pk).exists())
+        empty_import_response = self.client.post(
+            reverse('leads:delete_imported_leads', args=[empty_import.pk]),
+            {'return_to': 'upload'},
+        )
+        self.assertRedirects(empty_import_response, reverse('leads:excel_upload'))
+        self.assertFalse(ExcelImport.objects.filter(pk=empty_import.pk).exists())
+        self.assertNotContains(
+            self.client.get(reverse('leads:import_history')), 'Delete Leads'
+        )
+        self.assertTrue(ActivityLog.objects.filter(
+            user=admin,
+            action=ActivityLog.ActionType.DELETE,
+            model_name='ExcelImport',
+            object_id=str(import_obj.pk),
+        ).exists())
+
+    def test_non_admin_cannot_delete_imported_leads(self):
+        admin = User.objects.create_user(
+            email='admin@example.com', password='password', role=Role.ADMIN,
+            username='admin',
+        )
+        caller = User.objects.create_user(
+            email='caller@example.com', password='password', role=Role.CALLING,
+            username='caller',
+        )
+        import_obj = ExcelImport.objects.create(
+            uploaded_by=admin,
+            file_name='leads.xlsx',
+            imported_rows=1,
+        )
+        lead = Lead.objects.create(
+            name='Imported Lead',
+            phone='555-123-4567',
+            source='EXCEL',
+            created_by=admin,
+            excel_import=import_obj,
+        )
+        self.client.force_login(caller)
+
+        response = self.client.post(
+            reverse('leads:delete_imported_leads', args=[import_obj.pk])
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Lead.objects.filter(pk=lead.pk).exists())
+
+    def test_delete_matches_legacy_import_leads_without_batch_foreign_key(self):
+        admin = User.objects.create_user(
+            email='admin@example.com', password='password', role=Role.ADMIN,
+        )
+        workbook = BytesIO()
+        pd.DataFrame([{
+            'Name': 'Talwara Customer',
+            'Phone': '555-123-4567',
+        }]).to_excel(workbook, index=False)
+        import_obj = ExcelImport.objects.create(
+            uploaded_by=admin,
+            file_name='talwara sheet.xlsx',
+            file_content=workbook.getvalue(),
+            column_mapping={'name': 'Name', 'phone': 'Phone'},
+            imported_rows=1,
+            status=ExcelImport.ImportStatus.COMPLETED,
+        )
+        legacy_lead = Lead.objects.create(
+            name='Talwara Customer',
+            phone='5551234567',
+            source='EXCEL',
+            created_by=admin,
+        )
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            reverse('leads:delete_imported_leads', args=[import_obj.pk]),
+        )
+
+        self.assertRedirects(response, reverse('leads:import_history'))
+        self.assertFalse(Lead.objects.filter(pk=legacy_lead.pk).exists())
+        self.assertFalse(ExcelImport.objects.filter(pk=import_obj.pk).exists())
+
+    def test_does_not_remove_import_history_when_rows_cannot_be_matched(self):
+        admin = User.objects.create_user(
+            email='admin@example.com', password='password', role=Role.ADMIN,
+        )
+        import_obj = ExcelImport.objects.create(
+            uploaded_by=admin,
+            file_name='legacy.xlsx',
+            imported_rows=5,
+            status=ExcelImport.ImportStatus.COMPLETED,
+        )
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            reverse('leads:delete_imported_leads', args=[import_obj.pk]),
+        )
+
+        self.assertRedirects(response, reverse('leads:import_history'))
+        self.assertTrue(ExcelImport.objects.filter(pk=import_obj.pk).exists())
+
     def test_upload_and_confirm_do_not_write_to_local_file_storage(self):
         admin = User.objects.create_user(
             email='admin@example.com', password='password', role=Role.ADMIN,

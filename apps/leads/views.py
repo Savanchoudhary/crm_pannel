@@ -2,10 +2,13 @@
 Leads views — list, detail, create, update, Excel import/export, assignment.
 """
 import json
+import re
+from io import BytesIO
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from django.db import transaction
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
 from django.utils import timezone
@@ -18,7 +21,7 @@ from .models import Lead, LeadAssignment, Note, ExcelImport, LeadStatus, LeadSou
 from .excel_utils import (
     read_excel_file, detect_column_mapping,
     validate_and_process_rows, import_leads_from_rows,
-    export_leads_to_excel, COLUMN_ALIASES,
+    export_leads_to_excel, COLUMN_ALIASES, PHONE_REGEX,
 )
 
 
@@ -377,7 +380,7 @@ def excel_upload(request):
 
     recent_imports = ExcelImport.objects.filter(
         uploaded_by=request.user
-    ).order_by('-created_at')[:10]
+    ).annotate(current_lead_count=Count('leads')).order_by('-created_at')[:10]
     return render(request, 'leads/excel_upload.html', {'recent_imports': recent_imports})
 
 
@@ -495,10 +498,120 @@ def excel_export(request):
 # ---------------------------------------------------------------------------
 @admin_required
 def import_history(request):
-    imports = ExcelImport.objects.select_related('uploaded_by').order_by('-created_at')
+    imports = ExcelImport.objects.select_related('uploaded_by').annotate(
+        current_lead_count=Count('leads')
+    ).order_by('-created_at')
     paginator = Paginator(imports, 20)
     page = paginator.get_page(request.GET.get('page'))
     return render(request, 'leads/import_history.html', {'imports': page})
+
+
+@admin_required
+@require_POST
+def delete_imported_leads(request, pk):
+    import_obj = get_object_or_404(ExcelImport, pk=pk)
+    import_id = import_obj.pk
+    import_file_name = import_obj.file_name
+
+    with transaction.atomic():
+        leads_to_delete = import_obj.leads.all()
+
+        # Older imports may not have linked their leads to the import record.
+        if import_obj.file_content and import_obj.column_mapping:
+            workbook = BytesIO(import_obj.file_content)
+            workbook.name = import_obj.file_name
+            dataframe, error = read_excel_file(workbook)
+            if error:
+                messages.error(
+                    request,
+                    f'Could not verify the rows in {import_obj.file_name}: {error}',
+                )
+                return redirect(
+                    'leads:excel_upload'
+                    if request.POST.get('return_to') == 'upload'
+                    else 'leads:import_history'
+                )
+
+            phone_column = import_obj.column_mapping.get('phone')
+            name_column = import_obj.column_mapping.get('name')
+            if phone_column in dataframe.columns and name_column in dataframe.columns:
+                batch_rows = set()
+                for _, row in dataframe.iterrows():
+                    name = str(row.get(name_column, '')).strip()
+                    phone = str(row.get(phone_column, '')).strip()
+                    if name and PHONE_REGEX.match(phone):
+                        batch_rows.add((name, re.sub(r'[\s\-\(\)]', '', phone)))
+
+                next_import = ExcelImport.objects.filter(
+                    uploaded_by=import_obj.uploaded_by,
+                ).filter(
+                    Q(created_at__gt=import_obj.created_at) |
+                    Q(created_at=import_obj.created_at, pk__gt=import_obj.pk)
+                ).order_by('created_at', 'pk').first()
+
+                unlinked_leads = Lead.objects.filter(
+                    excel_import__isnull=True,
+                    source=LeadSource.EXCEL_UPLOAD,
+                    created_by=import_obj.uploaded_by,
+                    created_at__gte=import_obj.created_at,
+                    phone__in={phone for _, phone in batch_rows},
+                )
+                if next_import:
+                    unlinked_leads = unlinked_leads.filter(
+                        created_at__lt=next_import.created_at
+                    )
+                matching_ids = [
+                    lead.pk for lead in unlinked_leads
+                    if (lead.name, lead.phone) in batch_rows
+                ]
+                leads_to_delete = Lead.objects.filter(
+                    Q(pk__in=leads_to_delete.values('pk')) |
+                    Q(pk__in=matching_ids)
+                )
+
+        lead_count = leads_to_delete.count()
+        if not lead_count and import_obj.imported_rows:
+            messages.error(
+                request,
+                f'Could not safely identify the {import_obj.imported_rows} leads '
+                f'from {import_file_name}. The Excel file and import history '
+                'were kept, and no leads were deleted.',
+            )
+            return redirect(
+                'leads:excel_upload'
+                if request.POST.get('return_to') == 'upload'
+                else 'leads:import_history'
+            )
+
+        leads_to_delete.delete()
+        stored_file_name = import_obj.file.name
+        if stored_file_name:
+            file_storage = import_obj.file.storage
+            transaction.on_commit(
+                lambda: file_storage.delete(stored_file_name)
+            )
+        import_obj.delete()
+
+        ActivityLog.objects.create(
+            user=request.user,
+            action=ActivityLog.ActionType.DELETE,
+            model_name='ExcelImport',
+            object_id=str(import_id),
+            description=(
+                f'Deleted Excel import {import_file_name}, its history, and '
+                f'{lead_count} imported leads.'
+            ),
+            ip_address=get_client_ip(request),
+        )
+
+    messages.success(
+        request,
+        f'{import_file_name} and its import history were deleted. '
+        f'{lead_count} imported leads were also deleted.',
+    )
+    if request.POST.get('return_to') == 'upload':
+        return redirect('leads:excel_upload')
+    return redirect('leads:import_history')
 
 
 # ---------------------------------------------------------------------------

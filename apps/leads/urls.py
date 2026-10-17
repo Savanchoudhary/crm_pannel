@@ -14,5 +14,6 @@ urlpatterns = [
     path('excel/import/', views.excel_import_confirm, name='excel_import'),
     path('excel/export/', views.excel_export, name='excel_export'),
     path('excel/history/', views.import_history, name='import_history'),
+    path('excel/history/<int:pk>/delete-leads/', views.delete_imported_leads, name='delete_imported_leads'),
     path('api/search/', views.lead_search_api, name='search_api'),
 ]

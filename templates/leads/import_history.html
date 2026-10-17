@@ -33,6 +33,8 @@
           <th>Duplicates</th>
           <th>Invalid</th>
           <th>Status</th>
+          <th>Current Leads</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -55,10 +57,22 @@
               {{ imp.status }}
             </span>
           </td>
+          <td class="fw-700">{{ imp.current_lead_count|intcomma }}</td>
+          <td>
+            {% if imp.current_lead_count %}
+            <form method="post" action="{% url 'leads:delete_imported_leads' imp.pk %}" class="d-inline"
+                  onsubmit="return confirm('Delete all {{ imp.current_lead_count }} leads imported from {{ imp.file_name|escapejs }}? This cannot be undone.');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i> Delete Leads
+              </button>
+            </form>
+            {% endif %}
+          </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="8">
+          <td colspan="10">
             <div class="table-empty">
               <i class="bi bi-file-earmark-x"></i>
               <p>No imports yet. <a href="{% url 'leads:excel_upload' %}">Start your first import</a>.</p>
